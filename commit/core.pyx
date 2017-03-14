@@ -609,7 +609,7 @@ cdef class Evaluation :
         print '   [ %.1f seconds ]' % ( time.time() - tic )
 
 
-    def fit( self, tol_fun = 1e-3, max_iter = 100, verbose = 1, x0 = None ) :
+    def fit( self, tol_fun = 1e-3, max_iter = 100, verbose = 1, solver = 'nnls', lambda_v = 0.5, indexes = None, w = None ) :
         """Fit the model to the data.
 
         Parameters
@@ -620,6 +620,16 @@ cdef class Evaluation :
             Maximum number of iterations (default : 100)
         verbose : integer
             Level of verbosity: 0=no print, 1=print progress (default : 1)
+        solver : string
+            Two possible option avaiable: 'nnls' or 'nnglasso'
+        lambda_v : the value lambda in the equation
+                min  0.5*||y-A x||_2^2 + lambda*||x||_{2,1} s.t. x >= 0
+            this value needs to be set in case of 'nnglasso' (default : 0, problem equal to 'nnls')
+        indexes : array containing the start of every group, last index is the end of the last group
+            First group start at 0
+            Last value put the size of the tractogram the size of the tractogram
+            Here we assume no constraint on the EC and ISO
+        w : weights per group (size: number of groups)
         """
         if self.niiDWI is None :
             raise RuntimeError( 'Data not loaded; call "load_data()" first.' )
@@ -631,9 +641,6 @@ cdef class Evaluation :
             raise RuntimeError( 'Threads not set; call "set_threads()" first.' )
         if self.A is None :
             raise RuntimeError( 'Operator not built; call "build_operator()" first.' )
-        if x0 is not None :
-            if x0.shape[0] != self.A.shape[1] :
-                raise RuntimeError( 'x0: dimension do not match' )
 
         self.CONFIG['optimization'] = {}
         self.CONFIG['optimization']['tol_fun']  = tol_fun
@@ -642,11 +649,25 @@ cdef class Evaluation :
 
         # run solver
         t = time.time()
-        print '\n-> Fit model using "nnls":'
         Y = self.niiDWI_img[ self.DICTIONARY['MASK_ix'], self.DICTIONARY['MASK_iy'], self.DICTIONARY['MASK_iz'], : ].flatten().astype(np.float64)
-        self.x = commit.solvers.nnls( Y, self.A, tol_fun=tol_fun, max_iter=max_iter, verbose=verbose, x0=x0 )
+        if solver == 'nnls' :
+             print '\n-> Fit model using "nnls":'
+             self.x = commit.solvers.nnls( Y, self.A, tol_fun=tol_fun, max_iter=max_iter, verbose=verbose )
+        if solver == 'nnglasso' :
+             if indexes != None :
+                 if isinstance(indexes, np.ndarray):
+                     if w == None :
+                         w = np.ones(len(indexes)-1, dtype=np.int)
+                         print '\n-> Fit model using "nnglasso":'
+                         self.x = commit.solvers.nnglasso( Y, self.A, tol_fun=tol_fun, max_iter=max_iter, verbose=verbose, lambda_v=lambda_v, indexes=indexes, w=w )
+                     else:
+                         raise RuntimeError( 'Create indexes as numpy array' )
+
+             else :
+                 raise RuntimeError( 'Create indexes matrix' )
         self.CONFIG['optimization']['fit_time'] = time.time()-t
         print '   [ %s ]' % ( time.strftime("%Hh %Mm %Ss", time.gmtime(self.CONFIG['optimization']['fit_time']) ) )
+
 
 
     def save_results( self, path_suffix = None ) :
