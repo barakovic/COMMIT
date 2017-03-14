@@ -609,7 +609,7 @@ cdef class Evaluation :
         print '   [ %.1f seconds ]' % ( time.time() - tic )
 
 
-    def fit( self, tol_fun = 1e-3, max_iter = 100, verbose = 1, x0 = None ) :
+    def fit( self, solver = 'nnls_backtracking', tol_fun = 1e-3, max_iter = 100, verbose = 1, x0 = None ) :
         """Fit the model to the data.
 
         Parameters
@@ -642,11 +642,18 @@ cdef class Evaluation :
 
         # run solver
         t = time.time()
-        print '\n-> Fit model using "nnls":'
         Y = self.niiDWI_img[ self.DICTIONARY['MASK_ix'], self.DICTIONARY['MASK_iy'], self.DICTIONARY['MASK_iz'], : ].flatten().astype(np.float64)
-        self.x = commit.solvers.nnls( Y, self.A, tol_fun=tol_fun, max_iter=max_iter, verbose=verbose, x0=x0 )
+        if solver == 'nnls_backtracking' :
+            print '\n-> Fit model using "nnls with FISTA-like acceleration with backtracking":'
+            self.x = commit.solvers.nnls_backtracking( Y, self.A, tol_fun=tol_fun, max_iter=max_iter, verbose=verbose, x0=x0 )
+        if solver == 'nnls_constant_stepsize' :
+            print '\n-> Fit model using "nnls with FISTA-like acceleration with costant stepsize":'
+            L = commit.solvers.pow_method( self.A )
+            self.x = commit.solvers.nnls_constant_stepsize( Y, self.A, L, tol_fun=tol_fun, max_iter=max_iter, verbose=verbose, x0=x0 )
         self.CONFIG['optimization']['fit_time'] = time.time()-t
         print '   [ %s ]' % ( time.strftime("%Hh %Mm %Ss", time.gmtime(self.CONFIG['optimization']['fit_time']) ) )
+
+
 
 
     def save_results( self, path_suffix = None ) :
