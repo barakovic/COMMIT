@@ -1,7 +1,9 @@
 import numpy as np
 import sys
 
-def nnls( y, A, At = None, tol_fun = 1e-4, max_iter = 100, verbose = 1, x0 = None ) :
+eps = np.finfo(float).eps
+
+def nnls( y, A, At = None, tol_fun = 1e-4, tol_x = 1e-9, max_iter = 100, verbose = 1, x0 = None ) :
     """Solve non negative least squares problem of the following form:
 
        min 0.5*||y-A x||_2^2 s.t. x >= 0
@@ -22,6 +24,11 @@ def nnls( y, A, At = None, tol_fun = 1e-4, max_iter = 100, verbose = 1, x0 = Non
     tol_fun : double, optional (default: 1e-4).
         Minimum relative change of the objective value. The algorithm stops if:
                | f(x(t)) - f(x(t-1)) | / f(x(t)) < tol_fun,
+        where x(t) is the estimate of the solution at iteration t.
+
+    tol_x : double, optional (default: 1e-9).
+        Minimum relative change of the solution x. The algorithm stops if:
+                || x(t) - x(t-1) || / || x(t) || < tol_x,
         where x(t) is the estimate of the solution at iteration t.
 
     max_iter : integer, optional (default: 100).
@@ -65,6 +72,10 @@ def nnls( y, A, At = None, tol_fun = 1e-4, max_iter = 100, verbose = 1, x0 = Non
     L = np.linalg.norm( A.dot(grad) )**2 / np.linalg.norm(grad)**2
     mu = 1.9 / L
 
+    if verbose >= 1 :
+        print "      |     ||Ax-y||     |  Cost function    Abs error      Rel error    |     Abs x          Rel x"
+        print "------|------------------|-----------------------------------------------|------------------------------"
+
     # Main loop
     while True :
         if verbose >= 1 :
@@ -101,12 +112,24 @@ def nnls( y, A, At = None, tol_fun = 1e-4, max_iter = 100, verbose = 1, x0 = Non
             curr_obj = 0.5 * np.linalg.norm(res)**2
 
         # Global stopping criterion
-        rel_obj  = np.abs(curr_obj - prev_obj) / curr_obj
+        abs_obj = np.abs(curr_obj - prev_obj)
+        rel_obj = abs_obj / curr_obj
+        abs_x   = np.linalg.norm(x - prev_x)
+        rel_x   = abs_x / ( np.linalg.norm(x) + eps )
         if verbose >= 1 :
-            print "  %13.7e  %13.7e" % ( np.sqrt(2.0*curr_obj), rel_obj )
+            print "  %13.7e  |  %13.7e  %13.7e  %13.7e  |  %13.7e  %13.7e" % ( np.sqrt(2.0*curr_obj), curr_obj, abs_obj, rel_obj, abs_x, rel_x )
 
-        if rel_obj < tol_fun :
+        if abs_obj < eps :
+            criterion = "ABS_OBJ"
+            break
+        elif rel_obj < tol_fun :
             criterion = "REL_OBJ"
+            break
+        elif abs_x < eps :
+            criterion = "ABS_X"
+            break
+        elif rel_x < tol_x :
+            criterion = "REL_X"
             break
         elif iter >= max_iter :
             criterion = "MAX_IT"
@@ -128,12 +151,12 @@ def nnls( y, A, At = None, tol_fun = 1e-4, max_iter = 100, verbose = 1, x0 = Non
         qfval = 0.5 * np.linalg.norm(res)**2
 
     if verbose >= 1 :
-        print "\t< Stopping criterion: %s >" % criterion
+        print "< Stopping criterion: %s >" % criterion
 
     return x
 
 
-def nnglasso( y, A, lambda_v, indexes, w, At = None, tol_fun = 1e-4, max_iter = 100, verbose = 1, x0 = None ) :
+def nnglasso( y, A, lambda_v, indexes, w, At = None, tol_fun = 1e-4, tol_x = 1e-9, max_iter = 100, verbose = 1, x0 = None ) :
     """solve_nnglasso - Solve the non negative group lasso problem
 
        sol = solve_nnlasso(y, A, At, PARAM) solves:
@@ -164,10 +187,6 @@ def nnglasso( y, A, lambda_v, indexes, w, At = None, tol_fun = 1e-4, max_iter = 
     -------
     x : 1-d array of doubles.
         Best solution in the least-squares sense.
-    Notes
-    -----
-    Author: Rafael Carrillo
-    E-mail: rafael.carrillo@epfl.ch
     """
     ng = len(indexes)-1
 
@@ -187,7 +206,7 @@ def nnglasso( y, A, lambda_v, indexes, w, At = None, tol_fun = 1e-4, max_iter = 
         xhat = np.zeros( grad.shape[0], dtype=np.float64 )
         prev_obj = 0.5 * np.linalg.norm( res )**2
 
-    iteration = 1
+    iter = 1
     prev_x = xhat
     told = 1
     beta = 0.9
@@ -197,10 +216,14 @@ def nnglasso( y, A, lambda_v, indexes, w, At = None, tol_fun = 1e-4, max_iter = 
     L = np.linalg.norm( A.dot(grad) )**2 / np.linalg.norm(grad)**2
     mu = 1.9 / L
 
+    if verbose >= 1 :
+        print "      |     ||Ax-y||     |  Cost function    Abs error      Rel error    |     Abs x          Rel x"
+        print "------|------------------|-----------------------------------------------|------------------------------"
+
     # Main loop
     while True :
         if verbose >= 1 :
-            print "%4d  |" % iteration,
+            print "%4d  |" % iter,
             sys.stdout.flush()
 
         # Gradient descend step
@@ -234,14 +257,26 @@ def nnglasso( y, A, lambda_v, indexes, w, At = None, tol_fun = 1e-4, max_iter = 
             curr_obj = 0.5 * np.linalg.norm(res)**2 + lambda_v*sol[1]
 
         # Global stopping criterion
-        rel_obj  = np.abs(curr_obj - prev_obj) / curr_obj
+        abs_obj = np.abs(curr_obj - prev_obj)
+        rel_obj = abs_obj / curr_obj
+        abs_x   = np.linalg.norm(x - prev_x)
+        rel_x   = abs_x / ( np.linalg.norm(x) + eps )
         if verbose >= 1 :
-            print "  %13.7e  %13.7e" % ( np.sqrt(2.0*curr_obj), rel_obj )
+            print "  %13.7e  |  %13.7e  %13.7e  %13.7e  |  %13.7e  %13.7e" % ( np.sqrt(2.0*curr_obj), curr_obj, abs_obj, rel_obj, abs_x, rel_x )
 
-        if rel_obj < tol_fun :
+        if abs_obj < eps :
+            criterion = "ABS_OBJ"
+            break
+        elif rel_obj < tol_fun :
             criterion = "REL_OBJ"
             break
-        elif iteration >= max_iter :
+        elif abs_x < eps :
+            criterion = "ABS_X"
+            break
+        elif rel_x < tol_x :
+            criterion = "REL_X"
+            break
+        elif iter >= max_iter :
             criterion = "MAX_IT"
             break
 
@@ -254,14 +289,14 @@ def nnglasso( y, A, lambda_v, indexes, w, At = None, tol_fun = 1e-4, max_iter = 
         grad = At.dot(res)
 
         # Update variables
-        iteration += 1
+        iter += 1
         prev_obj = curr_obj
         prev_x = sol[0]
         told = t
         qfval = 0.5 * np.linalg.norm(res)**2
 
     if verbose >= 1 :
-        print "\t< Stopping criterion: %s >" % criterion
+        print "< Stopping criterion: %s >" % criterion
 
     return sol[0]
 
