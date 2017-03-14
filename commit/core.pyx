@@ -609,7 +609,7 @@ cdef class Evaluation :
         print '   [ %.1f seconds ]' % ( time.time() - tic )
 
 
-    def fit( self, tol_fun = 1e-3, max_iter = 100, verbose = 1, solver = 'nnls', lambda_v = 0.5, indexes = None, w = None ) :
+    def fit( self, tol_fun = 1e-3, max_iter = 100, verbose = 1, x0 = None, solver = 'nnls', lambda_v = 0.5, indexes = None, w = None ) :
         """Fit the model to the data.
 
         Parameters
@@ -641,6 +641,9 @@ cdef class Evaluation :
             raise RuntimeError( 'Threads not set; call "set_threads()" first.' )
         if self.A is None :
             raise RuntimeError( 'Operator not built; call "build_operator()" first.' )
+        if x0 is not None :
+            if x0.shape[0] != self.A.shape[1] :
+                raise RuntimeError( 'x0: dimension do not match' )
 
         self.CONFIG['optimization'] = {}
         self.CONFIG['optimization']['tol_fun']  = tol_fun
@@ -652,14 +655,14 @@ cdef class Evaluation :
         Y = self.niiDWI_img[ self.DICTIONARY['MASK_ix'], self.DICTIONARY['MASK_iy'], self.DICTIONARY['MASK_iz'], : ].flatten().astype(np.float64)
         if solver == 'nnls' :
              print '\n-> Fit model using "nnls":'
-             self.x = commit.solvers.nnls( Y, self.A, tol_fun=tol_fun, max_iter=max_iter, verbose=verbose )
+             self.x = commit.solvers.nnls( Y, self.A, tol_fun=tol_fun, max_iter=max_iter, verbose=verbose, x0=x0 )
         if solver == 'nnglasso' :
              if indexes != None :
                  if isinstance(indexes, np.ndarray):
                      if w == None :
                          w = np.ones(len(indexes)-1, dtype=np.int)
-                         print '\n-> Fit model using "nnglasso":'
-                         self.x = commit.solvers.nnglasso( Y, self.A, tol_fun=tol_fun, max_iter=max_iter, verbose=verbose, lambda_v=lambda_v, indexes=indexes, w=w )
+                         print '\n-> Fit model using "nnglasso IC, nnlasso EC and ISO":'
+                         self.x = commit.solvers.nnglasso( Y, self.A, tol_fun=tol_fun, max_iter=max_iter, verbose=verbose, lambda_v=lambda_v, indexes=indexes, w=w, x0=x0 )
                      else:
                          raise RuntimeError( 'Create indexes as numpy array' )
 
