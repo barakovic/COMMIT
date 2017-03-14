@@ -609,7 +609,7 @@ cdef class Evaluation :
         print '   [ %.1f seconds ]' % ( time.time() - tic )
 
 
-    def fit( self, tol_fun = 1e-3, max_iter = 100, verbose = 1, x0 = None ) :
+    def fit( self, tol_fun = 1e-3, max_iter = 100, verbose = 1, x0 = None, solver = 'nnls', lambda_v1=0.5, lambda_v2=0.5, lambda_v3=0.5, indexes=None, w=None ) :
         """Fit the model to the data.
 
         Parameters
@@ -642,9 +642,24 @@ cdef class Evaluation :
 
         # run solver
         t = time.time()
-        print '\n-> Fit model using "nnls":'
         Y = self.niiDWI_img[ self.DICTIONARY['MASK_ix'], self.DICTIONARY['MASK_iy'], self.DICTIONARY['MASK_iz'], : ].flatten().astype(np.float64)
-        self.x = commit.solvers.nnls( Y, self.A, tol_fun=tol_fun, max_iter=max_iter, verbose=verbose, x0=x0 )
+        if solver == 'nnls' :
+            print '\n-> Fit model using "nnls":'
+            self.x = commit.solvers.nnls( Y, self.A, tol_fun=tol_fun, max_iter=max_iter, verbose=verbose, x0=x0 )
+        if solver == 'nnglasso_nnlasso' :
+            if indexes != None :
+                if isinstance(indexes, np.ndarray):
+                    if w == None :
+                        print '\n-> Fit model using "nnglasso_nnlasso":'
+                        w = np.ones(len(indexes)-1, dtype=np.int)
+                        w[-2] = 0 # put weight EC to 0
+                        w[-1] = 0 # put weight ISO to 0
+                    self.x = commit.solvers.nnglasso_nnlasso( Y, self.A, tol_fun=tol_fun, max_iter=max_iter, verbose=verbose, lambda_v1=lambda_v1, lambda_v2=lambda_v2, lambda_v3=lambda_v3, indexes=indexes, w=w, x0=x0 )
+                else:
+                    raise RuntimeError( 'Create indexes as numpy array' )
+            else:
+                raise RuntimeError( 'Create indexes array' )
+
         self.CONFIG['optimization']['fit_time'] = time.time()-t
         print '   [ %s ]' % ( time.strftime("%Hh %Mm %Ss", time.gmtime(self.CONFIG['optimization']['fit_time']) ) )
 
