@@ -609,7 +609,7 @@ cdef class Evaluation :
         print '   [ %.1f seconds ]' % ( time.time() - tic )
 
 
-    def fit( self, tol_fun = 1e-3, max_iter = 100, verbose = 1, x0 = None ) :
+    def fit( self, tol_fun = 1e-3, max_iter = 100, verbose = 1, x0 = None, minutes = 120, save_step = False, path_steps = '', step_size = 0 ) :
         """Fit the model to the data.
 
         Parameters
@@ -644,7 +644,7 @@ cdef class Evaluation :
         t = time.time()
         print '\n-> Fit model using "nnls":'
         Y = self.niiDWI_img[ self.DICTIONARY['MASK_ix'], self.DICTIONARY['MASK_iy'], self.DICTIONARY['MASK_iz'], : ].flatten().astype(np.float64)
-        self.x = commit.solvers.nnls( Y, self.A, tol_fun=tol_fun, max_iter=max_iter, verbose=verbose, x0=x0 )
+        self.x = commit.solvers.nnls( Y, self.A, tol_fun=tol_fun, max_iter=max_iter, verbose=verbose, x0=x0, minutes = minutes, save_step = save_step, path_steps = path_steps, step_size = step_size )
         self.CONFIG['optimization']['fit_time'] = time.time()-t
         print '   [ %s ]' % ( time.strftime("%Hh %Mm %Ss", time.gmtime(self.CONFIG['optimization']['fit_time']) ) )
 
@@ -698,7 +698,8 @@ cdef class Evaluation :
             x_map = self.x
             x = self.x
         with open( pjoin(RESULTS_path,'results.pickle'), 'wb+' ) as fid :
-            cPickle.dump( [self.CONFIG, self.x, x], fid, protocol=2 )
+            # save x_preconditioned, x and normalization to pass from x_precon to x
+            cPickle.dump( [self.CONFIG, self.x, x, np.hstack((norm1*norm_fib,norm2,norm3))], fid, protocol=2 )
         print '[ OK ]'
 
         # Map of wovelwise errors

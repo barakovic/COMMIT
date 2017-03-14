@@ -1,10 +1,10 @@
+import datetime
 import numpy as np
 import sys
 
 eps = np.finfo(float).eps
 
-
-def nnls( y, A, At = None, tol_fun = 1e-4, tol_x = 1e-9, max_iter = 100, verbose = 1, x0 = None ) :
+def nnls( y, A, At = None, tol_fun = 1e-4, tol_x = 1e-9, max_iter = 100, verbose = 1, x0 = None, minutes = 120, save_step = False, path_steps = '', step_size = 0 ) :
     """Solve non negative least squares problem of the following form:
 
        min 0.5*||y-A x||_2^2 s.t. x >= 0
@@ -51,6 +51,9 @@ def nnls( y, A, At = None, tol_fun = 1e-4, tol_x = 1e-9, max_iter = 100, verbose
     Author: Rafael Carrillo
     E-mail: rafael.carrillo@epfl.ch
     """
+    # Set time
+    endTime = datetime.datetime.now() + datetime.timedelta(minutes=minutes)
+
     # Initialization
     if At is None :
         At = A.T
@@ -117,6 +120,11 @@ def nnls( y, A, At = None, tol_fun = 1e-4, tol_x = 1e-9, max_iter = 100, verbose
         rel_obj = abs_obj / curr_obj
         abs_x   = np.linalg.norm(x - prev_x)
         rel_x   = abs_x / ( np.linalg.norm(x) + eps )
+
+        if save_step :
+            if iter % step_size == 0 :
+                np.save(path_steps + '/weights_iteration_' + str(iter), x)
+
         if verbose >= 1 :
             print "  %13.7e  |  %13.7e  %13.7e  %13.7e  |  %13.7e  %13.7e" % ( np.sqrt(2.0*curr_obj), curr_obj, abs_obj, rel_obj, abs_x, rel_x )
 
@@ -134,6 +142,9 @@ def nnls( y, A, At = None, tol_fun = 1e-4, tol_x = 1e-9, max_iter = 100, verbose
             break
         elif iter >= max_iter :
             criterion = "MAX_IT"
+            break
+        elif datetime.datetime.now() >= endTime :
+            criterion = "TIME"
             break
 
         # FISTA update
