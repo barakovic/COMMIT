@@ -36,3 +36,24 @@ More information/documentation can be found in the [`doc`](doc/) folder.
 
 Tutorials are provided in the [`doc/tutorials`](doc/tutorials/) folder to help you get started with the COMMIT framework.
 
+## Use nnglasso as reweighted nnglasso
+Using the of the formulation of reweighting from the paper
+**Sparse regularization for fiber ODF reconstruction: from the suboptimality of ℓ2 and ℓ1 priors to ℓ0**
+Alessandro Daducci, Dimitri Van De Ville, Jean-Philippe Thiran, Yves Wiaux
+*Medical Image Analysis 18 (2014) 820–833*
+[Link to publisher](http://www.sciencedirect.com/science/article/pii/S1361841514000243)
+
+```python
+tau = 0.01 #choose a tau for the reweighting
+lambda_v = 0.1 #choose a lambda for the group sparsity
+indexes = [...] # array of indexes for your group, e.g.[0,6,...., size of the x]
+max_iter = 5 # number of iterations for the reweighting
+
+mit.fit( solver= "nnglasso", indexes=indexes, lambda_v=lambda_v )
+
+for i in range ( 1, max_iter ):
+  for i in range( 0, len(indexes)-1 ):
+    w[i] = 1./( np.linalg.norm( x[indexes[i]:indexes[i+1]) + tau )
+  mit.fit( solver= "nnglasso", indexes=indexes, lambda_v=lambda_v, w=w )
+
+```
