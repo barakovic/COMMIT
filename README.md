@@ -37,11 +37,12 @@ More information/documentation can be found in the [`doc`](doc/) folder.
 Tutorials are provided in the [`doc/tutorials`](doc/tutorials/) folder to help you get started with the COMMIT framework.
 
 ## Use nnglasso as reweighted nnglasso
-Using the of the formulation of reweighting from the paper
-**Sparse regularization for fiber ODF reconstruction: from the suboptimality of ℓ2 and ℓ1 priors to ℓ0**
-Alessandro Daducci, Dimitri Van De Ville, Jean-Philippe Thiran, Yves Wiaux
-*Medical Image Analysis 18 (2014) 820–833*
-[Link to publisher](http://www.sciencedirect.com/science/article/pii/S1361841514000243)
+Using the of the formulation of reweighting from the paper  
+**Sparse regularization for fiber ODF reconstruction: from the suboptimality of ℓ2 and ℓ1 priors to ℓ0**  
+Alessandro Daducci, Dimitri Van De Ville, Jean-Philippe Thiran, Yves Wiaux  
+*Medical Image Analysis 18 (2014) 820–833*  
+[Link to publisher](http://www.sciencedirect.com/science/article/pii/S1361841514000243)  
+
 
 ```python
 tau = 0.01 #choose a tau for the reweighting
