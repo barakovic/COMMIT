@@ -609,7 +609,7 @@ cdef class Evaluation :
         print '   [ %.1f seconds ]' % ( time.time() - tic )
 
 
-    def fit( self, tol_fun = 1e-3, max_iter = 100, verbose = 1, x0 = None, solver = 'nnls', lambda_v = 0.5, indexes = None, w = None ) :
+    def fit( self, tol_fun = 1e-3, max_iter = 100, verbose = 1, x0 = None, solver = 'nnls', lambda_v = 0.5, nic = 0, nf = 0, w = None ) :
         """Fit the model to the data.
 
         Parameters
@@ -657,17 +657,12 @@ cdef class Evaluation :
              print '\n-> Fit model using "nnls":'
              self.x = commit.solvers.nnls( Y, self.A, tol_fun=tol_fun, max_iter=max_iter, verbose=verbose, x0=x0 )
         if solver == 'nnglasso' :
-             if indexes != None :
-                 if isinstance(indexes, np.ndarray):
-                     if w == None :
-                         w = np.ones(len(indexes)-1, dtype=np.int)
-                         print '\n-> Fit model using "nnglasso IC, nnlasso EC and ISO":'
-                         self.x = commit.solvers.nnglasso( Y, self.A, tol_fun=tol_fun, max_iter=max_iter, verbose=verbose, lambda_v=lambda_v, indexes=indexes, w=w, x0=x0 )
-                     else:
-                         raise RuntimeError( 'Create indexes as numpy array' )
-
-             else :
-                 raise RuntimeError( 'Create indexes matrix' )
+             if w == None :
+                 w = np.ones(nf, dtype=np.int)
+                 print '\n-> Fit model using "nnglasso IC":'
+                 self.x = commit.solvers.nnglasso( Y, self.A, tol_fun=tol_fun, max_iter=max_iter, verbose=verbose, lambda_v=lambda_v, nic=nic, nf=nf, w=w, x0=x0 )
+             else:
+                 raise RuntimeError( 'Create indexes as numpy array' )
         self.CONFIG['optimization']['fit_time'] = time.time()-t
         print '   [ %s ]' % ( time.strftime("%Hh %Mm %Ss", time.gmtime(self.CONFIG['optimization']['fit_time']) ) )
 

@@ -84,7 +84,6 @@ def nnls( y, A, At = None, tol_fun = 1e-4, tol_x = 1e-9, max_iter = 100, verbose
 
         # Gradient descend step
         x = xhat - mu*grad
-
         # Projection onto the positive orthant
         x = np.real( x )
         x[ x<0 ] = 0
@@ -156,7 +155,7 @@ def nnls( y, A, At = None, tol_fun = 1e-4, tol_x = 1e-9, max_iter = 100, verbose
     return x
 
 
-def nnglasso( y, A, lambda_v, indexes, w, At = None, tol_fun = 1e-4, tol_x = 1e-9, max_iter = 100, verbose = 1, x0 = None ) :
+def nnglasso( y, A, lambda_v, nic, nf, w, At = None, tol_fun = 1e-4, tol_x = 1e-9, max_iter = 100, verbose = 1, x0 = None ) :
     """solve_nnglasso - Solve the non negative group lasso problem
 
        sol = solve_nnlasso(y, A, At, PARAM) solves:
@@ -188,7 +187,6 @@ def nnglasso( y, A, lambda_v, indexes, w, At = None, tol_fun = 1e-4, tol_x = 1e-
     x : 1-d array of doubles.
         Best solution in the least-squares sense.
     """
-    ng = len(indexes)-1
 
     # Initialization
     if At is None :
@@ -198,12 +196,12 @@ def nnglasso( y, A, lambda_v, indexes, w, At = None, tol_fun = 1e-4, tol_x = 1e-
         xhat = x0
         res = A.dot(xhat) - y
         grad = At.dot(res)
-        fval = l2l1_prox( x, 1, w, ng, indexes )[1]
+        fval = l2l1_prox( x, 1, w, nic, nf )[1]
         prev_obj = 0.5 * np.linalg.norm(res)**2 + lambda_v*fval
     else :
         res = -y
         grad = At.dot(res)
-        xhat = np.zeros( grad.shape[0], dtype=np.float64 )
+        xhat = np.zeros( A.shape[1], dtype=np.float64 )
         prev_obj = 0.5 * np.linalg.norm( res )**2
 
     iter = 1
@@ -228,11 +226,10 @@ def nnglasso( y, A, lambda_v, indexes, w, At = None, tol_fun = 1e-4, tol_x = 1e-
 
         # Gradient descend step
         x = xhat - mu*grad
-
         # Prox non negative L1 norm
         x = np.maximum( x,0 )
 
-        sol = l2l1_prox( x, lambda_v*mu, w, ng, indexes )
+        sol = l2l1_prox( x, lambda_v*mu, w, nic, nf )
 
         # Stepsize check
         tmp = sol[0]-xhat
@@ -248,7 +245,7 @@ def nnglasso( y, A, lambda_v, indexes, w, At = None, tol_fun = 1e-4, tol_x = 1e-
             # Prox non negative L1 norm
             x = np.maximum( x,0 )
 
-            sol = l2l1_prox( x, lambda_v*mu, w, ng, indexes )
+            sol = l2l1_prox( x, lambda_v*mu, w, nic, nf )
 
             # New stepsize check
             tmp = sol[0]-xhat
@@ -301,7 +298,7 @@ def nnglasso( y, A, lambda_v, indexes, w, At = None, tol_fun = 1e-4, tol_x = 1e-
     return sol[0]
 
 
-def l2l1_prox( x, lambda_v, w, NG, indexes ) :
+def l2l1_prox( x, lambda_v, w, NIC, NF ) :
     """L2-L1 proximal operator (group sparsity)
 
     Inputs:
@@ -319,15 +316,12 @@ def l2l1_prox( x, lambda_v, w, NG, indexes ) :
     """
     sol = np.zeros( x.shape[0], dtype=np.float64 )
     T = np.zeros( w.shape[0], dtype=np.float64 )
+    end = NF*NIC
 
-    for k in range (0, NG) :
-
-        # Pointers
-        pointer1 = indexes[k]
-        pointer2 = indexes[k+1]
+    for k in range (0, NF) :
 
         # Compute L2 norm of the group
-        normvec = np.linalg.norm(x[pointer1:pointer2])
+        normvec = np.linalg.norm(x[k:end:NF])
 
         # Soft thresholding of the norm
         T[k] = np.maximum(normvec - lambda_v * w[k],0)
@@ -337,8 +331,9 @@ def l2l1_prox( x, lambda_v, w, NG, indexes ) :
             normvec = np.spacing(1)
 
         # Scaling
-        sol[pointer1:pointer2] = np.multiply(x[pointer1:pointer2], T[k]) / normvec
+        sol[k:end:NF] = np.multiply(x[k:end:NF], T[k]) / normvec
 
+    sol[end:] = x[end:]
     fval = np.dot( w, T )
 
     return sol, fval
