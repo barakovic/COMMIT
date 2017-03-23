@@ -609,7 +609,7 @@ cdef class Evaluation :
         print '   [ %.1f seconds ]' % ( time.time() - tic )
 
 
-    def fit( self, tol_fun = 1e-3, max_iter = 100, verbose = 1, x0 = None, solver = 'nnls', lambda_v = 0.5, nic = 0, nf = 0, w = None, , minutes = 120, save_step = False, path_steps = '', step_size = 0 ) :
+    def fit( self, tol_fun = 1e-3, max_iter = 100, verbose = 1, x0 = None, solver = 'nnls', lambda_v = 0.5, nic = 0, nf = 0, w = None, minutes = 120, save_step = False, path_steps = '', step_size = 0 ) :
         """Fit the model to the data.
 
         Parameters
