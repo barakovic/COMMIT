@@ -1,3 +1,4 @@
+import datetime
 import numpy as np
 import sys
 
@@ -155,7 +156,7 @@ def nnls( y, A, At = None, tol_fun = 1e-4, tol_x = 1e-9, max_iter = 100, verbose
     return x
 
 
-def nnglasso( y, A, lambda_v, nic, nf, w, At = None, tol_fun = 1e-4, tol_x = 1e-9, max_iter = 100, verbose = 1, x0 = None ) :
+def nnglasso( y, A, lambda_v, nic, nf, w, At = None, tol_fun = 1e-4, tol_x = 1e-9, max_iter = 100, verbose = 1, x0 = None, minutes = 120, save_step = False, path_steps = '', step_size = 0 ) :
     """solve_nnglasso - Solve the non negative group lasso problem
 
        sol = solve_nnlasso(y, A, At, PARAM) solves:
@@ -187,6 +188,8 @@ def nnglasso( y, A, lambda_v, nic, nf, w, At = None, tol_fun = 1e-4, tol_x = 1e-
     x : 1-d array of doubles.
         Best solution in the least-squares sense.
     """
+    # Set time
+    endTime = datetime.datetime.now() + datetime.timedelta(minutes=minutes)
 
     # Initialization
     if At is None :
@@ -213,6 +216,10 @@ def nnglasso( y, A, lambda_v, nic, nf, w, At = None, tol_fun = 1e-4, tol_x = 1e-
     # Step size computation
     L = np.linalg.norm( A.dot(grad) )**2 / np.linalg.norm(grad)**2
     mu = 1.9 / L
+
+    if save_step :
+        if iter % step_size == 0 :
+            np.save(path_steps + '/weights_iteration_' + str(iter), x)
 
     if verbose >= 1 :
         print "      |     ||Ax-y||     |  Cost function    Abs error      Rel error    |     Abs x          Rel x"
@@ -275,6 +282,9 @@ def nnglasso( y, A, lambda_v, nic, nf, w, At = None, tol_fun = 1e-4, tol_x = 1e-
             break
         elif iter >= max_iter :
             criterion = "MAX_IT"
+            break
+        elif datetime.datetime.now() >= endTime :
+            criterion = "TIME"
             break
 
         # FISTA update

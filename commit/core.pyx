@@ -609,7 +609,7 @@ cdef class Evaluation :
         print '   [ %.1f seconds ]' % ( time.time() - tic )
 
 
-    def fit( self, tol_fun = 1e-3, max_iter = 100, verbose = 1, x0 = None, solver = 'nnls', lambda_v = 0.5, nic = 0, nf = 0, w = None ) :
+    def fit( self, tol_fun = 1e-3, max_iter = 100, verbose = 1, x0 = None, solver = 'nnls', lambda_v = 0.5, nic = 0, nf = 0, w = None, , minutes = 120, save_step = False, path_steps = '', step_size = 0 ) :
         """Fit the model to the data.
 
         Parameters
@@ -660,7 +660,7 @@ cdef class Evaluation :
              if w == None :
                  w = np.ones(nf, dtype=np.int)
                  print '\n-> Fit model using "nnglasso IC":'
-                 self.x = commit.solvers.nnglasso( Y, self.A, tol_fun=tol_fun, max_iter=max_iter, verbose=verbose, lambda_v=lambda_v, nic=nic, nf=nf, w=w, x0=x0 )
+                 self.x = commit.solvers.nnglasso( Y, self.A, tol_fun=tol_fun, max_iter=max_iter, verbose=verbose, lambda_v=lambda_v, nic=nic, nf=nf, w=w, x0=x0, minutes = minutes, save_step = save_step, path_steps = path_steps, step_size = step_size )
              else:
                  raise RuntimeError( 'Create indexes as numpy array' )
         self.CONFIG['optimization']['fit_time'] = time.time()-t
@@ -717,7 +717,7 @@ cdef class Evaluation :
             x_map = self.x
             x = self.x
         with open( pjoin(RESULTS_path,'results.pickle'), 'wb+' ) as fid :
-            cPickle.dump( [self.CONFIG, self.x, x], fid, protocol=2 )
+            cPickle.dump( [self.CONFIG, self.x, x, np.hstack((norm1*norm_fib,norm2,norm3))], fid, protocol=2 )
         print '[ OK ]'
 
         # Map of wovelwise errors
