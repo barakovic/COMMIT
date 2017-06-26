@@ -336,7 +336,6 @@ void GLUT__display( void )
     {
         glPushMatrix();
         glTranslatef(TRK_offset.x, TRK_offset.y, TRK_offset.z);
-
         glLineWidth(1.0f);
 
         float *ptr  = TRK_coords, *ptrc = TRK_colors;
@@ -344,23 +343,23 @@ void GLUT__display( void )
         float thr = 0.5*TRK_crop;
         for(int f=0; f < TRK_nTractsPlotted; f++)
         {
-            glBegin(GL_LINE_STRIP);
+	    	glBegin(GL_LINE_STRIP);
             for(int i=0; i < TRK_nPoints[f]; i++)
             {
                 // plot segment only if it's close to center of VOXEL
                 if (
                       (
                         TRK_crop_mode && (
-                        ( showPlane[0] && abs( (ptr[0]+TRK_offset.x) - Vc.x ) <= thr ) ||
+                        ( showPlane[0] && abs( (ptr[2]+TRK_offset.x) - Vc.x ) <= thr ) ||
                         ( showPlane[1] && abs( (ptr[1]+TRK_offset.y) - Vc.y ) <= thr ) ||
-                        ( showPlane[2] && abs( (ptr[2]+TRK_offset.z) - Vc.z ) <= thr ) )
+                        ( showPlane[2] && abs( (ptr[0]+TRK_offset.z) - Vc.z ) <= thr ) )
                       )
                       ||
                       (
                         !TRK_crop_mode && (
-                        ( abs( (ptr[0]+TRK_offset.x) - Vc.x ) <= thr ) &&
+                        ( abs( (ptr[2]+TRK_offset.x) - Vc.x ) <= thr ) &&
                         ( abs( (ptr[1]+TRK_offset.y) - Vc.y ) <= thr ) &&
-                        ( abs( (ptr[2]+TRK_offset.z) - Vc.z ) <= thr ) )
+                        ( abs( (ptr[0]+TRK_offset.z) - Vc.z ) <= thr ) )
                       )
                     )
                 {

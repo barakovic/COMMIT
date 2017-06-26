@@ -11,53 +11,53 @@ using namespace std;
 
 #include "colormaps.h"
 
-NIFTI*                   niiDWI;
-VECTOR<int>		         dim;
-VECTOR<float>	         pixdim;
+NIFTI*                  niiDWI;
+VECTOR<int>		dim;
+VECTOR<float>	        pixdim;
 
-int                      SCHEME_version;
-vector< VECTOR<float> >	 SCHEME_dirs;
-vector<float>	         SCHEME_b;
-vector<int>              SCHEME_idxB0;
-vector<int>              SCHEME_idxDWI;
-vector<float>	         SCHEME_shells_b;
-vector< vector<int> >    SCHEME_shells_idx;
+int                     SCHEME_version;
+vector< VECTOR<float> >	SCHEME_dirs;
+vector<float>	        SCHEME_b;
+vector<int>             SCHEME_idxB0;
+vector<int>             SCHEME_idxDWI;
+vector<float>	        SCHEME_shells_b;
+vector< vector<int> >   SCHEME_shells_idx;
 
-blitz::Array<float,3>    MAP;
-VECTOR<int>		         VOXEL;
-float                    MAP_min, MAP_min_view, MAP_max, MAP_max_view;
-float 			         MAP_opacity = 0.1;//0.8;
-bool			         showPlane[3] = { false, false, true };
-bool                     showAxes = true;
-bool			         showHelp = false;
+blitz::Array<float,3>   MAP;
+VECTOR<int>		VOXEL;
+float           MAP_min, MAP_min_view, MAP_max, MAP_max_view;
+float 			MAP_opacity = 0.1;//0.8;
+bool			showPlane[3] = { false, false, true };
+bool                    showAxes = true;
+bool			showHelp = false;
 
-NIFTI*                   niiPEAKS;
-int				         PEAKS_n;
-bool			         PEAKS_show = true;
-int				         PEAKS_width = 2;
-float			         PEAKS_thr = 0;
-bool			         PEAKS_doNormalize = true;
-bool			         PEAKS_flip[3] = {false, false, false};
-float			         PEAKS_kolor_l = 0.0;
-float			         PEAKS_kolor_u = 0.0;
-int			             PEAKS_lut = 0;
-float                    (*PEAKS_lut_ptr)[256][3] = &COLORMAPS::hot;
+NIFTI*			niiPEAKS;
+int				PEAKS_n;
+bool			PEAKS_show = true;
+int				PEAKS_width = 2;
+float			PEAKS_thr = 0;
+bool			PEAKS_doNormalize = true;
+bool			PEAKS_flip[3] = {false, false, false};
+float			PEAKS_kolor_l = 0.0;
+float			PEAKS_kolor_u = 0.0;
+int				PEAKS_lut = 0;
+float           (*PEAKS_lut_ptr)[256][3] = &COLORMAPS::hot;
 
-TrackVis 		         TRK_file;
-int				         TRK_skip;
-int				         TRK_nTractsPlotted;
-int*   			         TRK_nPoints;
-float*			         TRK_coords;
-float*			         TRK_colors;
-float 			         TRK_crop = 1.0;
-bool 			         TRK_crop_mode = true;
-bool 			         TRK_show = false;
-VECTOR<float> 	         TRK_offset;
+TrackVis 		TRK_file;
+int				TRK_skip;
+int				TRK_nTractsPlotted;
+int*   			TRK_nPoints;
+float*			TRK_coords;
+float*			TRK_colors;
+float 			TRK_crop = 1.0;
+bool 			TRK_crop_mode = true;
+bool 			TRK_show = false;
+VECTOR<float> 	TRK_offset;
 
-bool 			         GLYPHS_show = false;
-int                      GLYPHS_shell = 0;
-bool			         GLYPHS_flip[3] = {false, false, false};
-float	                 GLYPHS_b0_thr = 50.0;
+bool 			GLYPHS_show = false;
+int             GLYPHS_shell = 0;
+bool			GLYPHS_flip[3] = {false, false, false};
+float	        GLYPHS_b0_thr = 50.0;
 
 #include "OPENGL_callbacks.cxx"
 
@@ -157,7 +157,7 @@ int main(int argc, char** argv)
         std::regex  reEMPTY( "^\\s*$" );
         std::smatch reMatches;
         int         Ns = 0;
-        float       x, y, z, b, G, D, d;
+        float       b;
         while( fgets(line, 1000, pFile) )
         {
             if( std::regex_match(string(line), reMatches, reEMPTY) )
@@ -167,33 +167,24 @@ int main(int argc, char** argv)
             {
                 if ( !std::regex_match(string(line), reMatches, reVERSION0) )
                     throw "Wrong row format";
-                x = std::atof( reMatches[1].str().c_str() );
-                y = std::atof( reMatches[2].str().c_str() );
-                z = std::atof( reMatches[3].str().c_str() );
-                b = std::atof( reMatches[4].str().c_str() ); // in mm^2/s
-                VECTOR<float> tmp( x, y, z );
+                VECTOR<float> tmp( std::atof(reMatches[1].str().c_str()), std::atof(reMatches[2].str().c_str()), std::atof(reMatches[3].str().c_str()) );
                 tmp.Normalize();
                 SCHEME_dirs.push_back( tmp );
+                b = std::atof(reMatches[4].str().c_str()); // in mm^2/s
                 SCHEME_b.push_back( b );
             }
             else
             {
                 if ( !std::regex_match(string(line), reMatches, reVERSION1) )
                     throw "Wrong row format";
-                x = std::atof( reMatches[1].str().c_str() );
-                y = std::atof( reMatches[2].str().c_str() );
-                z = std::atof( reMatches[3].str().c_str() );
-                G = std::atof( reMatches[4].str().c_str() );
-                D = std::atof( reMatches[5].str().c_str() );
-                d = std::atof( reMatches[6].str().c_str() );
-                VECTOR<float> tmp( x, y, z );
+                VECTOR<float> tmp( std::atof(reMatches[1].str().c_str()), std::atof(reMatches[2].str().c_str()), std::atof(reMatches[3].str().c_str()) );
                 tmp.Normalize();
                 SCHEME_dirs.push_back( tmp );
-                b = std::pow( 267.513e6*G*d, 2 ) * (D-d/3.0) * 1e-6; // in mm^2/s
+                b = std::pow( 267.513e6 * std::atof(reMatches[4].str().c_str()) * std::atof(reMatches[6].str().c_str()), 2 ) * (std::atof(reMatches[5].str().c_str()) - std::atof(reMatches[6].str().c_str())/3.0) * 1e-6; // in mm^2/s
                 SCHEME_b.push_back( b );
             }
 
-            if ( b<5.0 )
+            if ( b<5 )
             {
                 SCHEME_idxB0.push_back( Ns );
             }
@@ -449,7 +440,10 @@ int main(int argc, char** argv)
         float* ptr  = TRK_coords;
         float* ptrc = TRK_colors;
         float norm;
-        VECTOR<float> dir;
+
+		float tmp0, tmp1, tmp2;
+        
+		VECTOR<float> dir;
         TractsRead = 0;
         fseek(fp, 1000, SEEK_SET);
         for(int f=0; f < TRK_file.hdr.n_count ; f++)
@@ -462,12 +456,20 @@ int main(int argc, char** argv)
                 for(int i=0; i<N; i++)
                 {
                     fread((char*)ptr, 1, 12, fp);
-                    fseek( fp, n_s*4, SEEK_CUR );
+                    fread((char*)ptrc, 1, n_s*4, fp );
+					tmp0 = ptr[0];
+				    		tmp1 = ptr[1];
+				    		tmp2 = ptr[2];
+		    		
+				    		ptr[0] = tmp2;
+				    		ptr[1] = tmp1;
+				    		ptr[2] = tmp0;
 
-                    // coordinates
-                    ptr[0] /= pixdim.x;
-                    ptr[1] /= pixdim.y;
-                    ptr[2] /= pixdim.z;
+                    		// coordinates
+                    		ptr[0] /= pixdim.x;
+                    		ptr[1] /= pixdim.y;
+                    		ptr[2] /= pixdim.z;
+				    
 
                     // colors
                     if ( i > 0 )
@@ -476,9 +478,33 @@ int main(int argc, char** argv)
                         dir.y = *(ptr+1) - *(ptr-2);
                         dir.z = *(ptr+2) - *(ptr-1);
                         norm = dir.norm();
-                        ptrc[0] = abs( dir.x / norm );
+						ptrc[0] = abs( dir.x / norm );
                         ptrc[1] = abs( dir.y / norm );
                         ptrc[2] = abs( dir.z / norm );
+						/*
+						if( ptrc[0] <= 0 ){
+							ptrc[0] = 1;//abs( dir.x / norm );
+                        	ptrc[1] = 0;//abs( dir.y / norm );
+                        	ptrc[2] = 0;//abs( dir.z / norm );
+							
+						} else if ( ptrc[0] <0.5 && ptrc[0] >=0 ){
+							ptrc[0] = 1;
+							ptrc[1] = 1;
+                        	ptrc[2] = 0;
+						} else if ( ptrc[0] <1.5 && ptrc[0] >=0.5 ){
+							ptrc[0] = 0;
+							ptrc[1] = 1;
+							ptrc[2] = 0;
+						} else if ( ptrc[0] <3 && ptrc[0] >=1.5 ){
+							ptrc[0] = 0;
+							ptrc[1] = 1;
+							ptrc[2] = 1;
+						} else {
+							ptrc[0] = 0;
+							ptrc[1] = 0;
+							ptrc[2] = 1;
+						}*/
+
                     }
                     else
                     {
