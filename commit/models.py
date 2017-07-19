@@ -22,8 +22,8 @@ class VolumeFractions( amico.models.VolumeFractions ) :
     pass
 
 
-class StickZeppelinBallMultiDiffusivity( amico.models.StickZeppelinBallMultiDiffusivity ) :
-    """Simulate the response functions according to the Stick-Zeppelin-Ball model with different diffusivities.
+class StickZeppelinBallDiffusivityT2( amico.models.StickZeppelinBallDiffusivityT2 ) :
+    """Simulate the response functions according to the Stick-Zeppelin-Ball model with different diffusivities and T2.
     See the AMICO.model module for details.
     """
     pass
