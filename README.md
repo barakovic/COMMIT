@@ -1,4 +1,4 @@
-# How to isntall COMMIT_debugger on Ubuntu
+# How to install COMMIT_debugger on Ubuntu
 
 COMMIT_debugger is tested on:
 - cmake version 3.5.1
