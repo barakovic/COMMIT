@@ -21,12 +21,12 @@ sudo rm g++ cpp
 sudo ln -s g++-4.9 g++
 sudo ln -s cpp-4.9 cpp
 
---------------------
+Versions compliers:
 gcc -version 5.4
 g++ —version 4.9.3
 cpp —version 4.9.3
 c++ --version 4.9.3
--------------------
+
 
 
 3) Use it on Ubuntu:
