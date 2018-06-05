@@ -37,8 +37,12 @@ cd build
 cmake ..
 sudo make install
 
-4) Copy path in .bashrc
+4) if error in blitz:
+  remove libblitz0-dev and install blitzpp-blitz-1.0.1-0-g19079b6.tar.gz (in the files of COMMIT)
 
 
-5) if segmentation fault then run following command before:
+5) Copy path in .bashrc
+
+
+6) if segmentation fault then run following command before:
 export LD_PRELOAD=/usr/lib/x86_64-linux-gnu/mesa/libGL.so.1
