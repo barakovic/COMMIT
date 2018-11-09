@@ -19,3 +19,9 @@ class VolumeFractions( amico.models.VolumeFractions ) :
     See the AMICO.model module for details.
     """
     pass
+
+class CylinderHOTmixBall( amico.models.CylinderHOTmixBall ) :
+    """Simulate the response functions according to the VolumeFractions model.
+    See the AMICO.model module for details.
+    """
+    pass
