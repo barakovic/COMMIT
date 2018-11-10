@@ -621,7 +621,7 @@ cdef class Evaluation :
             raise RuntimeError( 'Data not loaded; call "load_data()" first.' )
         return self.niiDWI_img[ self.DICTIONARY['MASK_ix'], self.DICTIONARY['MASK_iy'], self.DICTIONARY['MASK_iz'], : ].flatten().astype(np.float64)
 
-    def fit( self, tol_fun = 1e-3, tol_x = 1e-6, max_iter = 100, verbose = 1, x0 = None, regularisation = None ) :
+    def fit( self, tol_fun = 1e-3, tol_x = 1e-6, max_iter = 100, verbose = 1, x0 = None, regularisation = None, save_x_suffix = None, save_x_interval = 0 ) :
         """Fit the model to the data.
 
         Parameters
@@ -651,6 +651,25 @@ cdef class Evaluation :
         if self.A is None :
             raise RuntimeError( 'Operator not built; call "build_operator()" first.' )
 
+        # Debug mode on
+        COEFF_path = 'Coeff_x_' + self.model.id
+        if save_x_suffix :
+            self.set_config('path_suffix', save_x_suffix)
+            COEFF_path = COEFF_path + save_x_suffix
+
+        print '\n-> Saving coefficients x to "%s/*":' % COEFF_path
+        tic = time.time()
+
+        # create folder or delete existing files (if any)
+        COEFF_path = pjoin( self.get_config('TRACKING_path'), COEFF_path )
+        if not exists( COEFF_path ) :
+            makedirs( COEFF_path )
+        else :
+            for f in glob.glob( pjoin(COEFF_path,'*') ) :
+                remove( f )
+        self.set_config('COEFF_path', COEFF_path)
+
+
         if x0 is not None :
             if x0.shape[0] != self.A.shape[1] :
                 raise RuntimeError( 'x0: dimension does not match the number of columns of the dictionary.' )
@@ -668,7 +687,25 @@ cdef class Evaluation :
         t = time.time()
         print '\n-> Fit model'
 
-        self.x, opt_details = commit.solvers.solve(self.get_y(), self.A, self.A.T, tol_fun = tol_fun, tol_x = tol_x, max_iter = max_iter, verbose = verbose, x0 = x0, regularisation = regularisation)
+        self.x, opt_details = commit.solvers.solve(self.get_y(), self.A, self.A.T, tol_fun = tol_fun, tol_x = tol_x, max_iter = max_iter, verbose = verbose, x0 = x0, regularisation = regularisation, coeff_path = COEFF_path, save_x_interval = save_x_interval )
+
+        nF = self.DICTIONARY['IC']['nF']
+        nE = self.DICTIONARY['EC']['nE']
+        nV = self.DICTIONARY['nV']
+        norm_fib = np.ones( nF )
+        # x is the x of the original problem
+        # self.x is the x preconditioned
+        if self.get_config('doNormalizeKernels') :
+            # renormalize the coefficients
+            norm1 = np.repeat(self.KERNELS['wmr_norm'],nF)
+            norm2 = np.repeat(self.KERNELS['wmh_norm'],nE)
+            norm3 = np.repeat(self.KERNELS['iso_norm'],nV)
+            norm_fib = np.kron(np.ones(self.KERNELS['wmr'].shape[0]), self.DICTIONARY['TRK']['norm'])
+            if save_x_interval > 0:
+                np.save( COEFF_path + '/norm1.npy', norm1 )
+                np.save( COEFF_path + '/norm2.npy', norm2 )
+                np.save( COEFF_path + '/norm3.npy', norm3 )
+                np.save( COEFF_path + '/norm_fib.npy', norm_fib )
 
         self.CONFIG['optimization']['fit_details'] = opt_details
         self.CONFIG['optimization']['fit_time'] = time.time()-t
@@ -676,7 +713,7 @@ cdef class Evaluation :
         print '   [ %s ]' % ( time.strftime("%Hh %Mm %Ss", time.gmtime(self.CONFIG['optimization']['fit_time']) ) )
 
 
-    def save_results( self, path_suffix = None, save_opt_details = True, save_coeff = False ) :
+    def save_results( self, path_suffix = None, save_opt_details = True, save_coeff = False, save_x_suffix = None ) :
         """Save the output (coefficients, errors, maps etc).
 
         Parameters
@@ -730,6 +767,7 @@ cdef class Evaluation :
             norm2 = np.repeat(self.KERNELS['wmh_norm'],nE)
             norm3 = np.repeat(self.KERNELS['iso_norm'],nV)
             norm_fib = np.kron(np.ones(self.KERNELS['wmr'].shape[0]), self.DICTIONARY['TRK']['norm'])
+                        
             x = self.x / np.hstack( (norm1*norm_fib,norm2,norm3) )
         else :
             x = self.x
