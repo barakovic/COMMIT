@@ -250,7 +250,7 @@ def evaluate_model(y, A, x, regularisation = None):
 
     return 0.5*np.linalg.norm(A.dot(x)-y)**2 + omega(x)
 
-def solve(y, A, At, tol_fun = 1e-4, tol_x = 1e-6, max_iter = 1000, verbose = 1, x0 = None, regularisation = None):
+def solve(y, A, At, tol_fun = 1e-4, tol_x = 1e-6, max_iter = 1000, verbose = 1, x0 = None, regularisation = None, coeff_path = None, save_x_interval = None):
     """
     Solve the regularised least squares problem
 
@@ -270,9 +270,9 @@ def solve(y, A, At, tol_fun = 1e-4, tol_x = 1e-6, max_iter = 1000, verbose = 1, 
     if x0 is None:
         x0 = np.zeros(A.shape[1])
 
-    return fista( y, A, At, tol_fun, tol_x, max_iter, verbose, x0, omega, prox)
+    return fista( y, A, At, tol_fun, tol_x, max_iter, verbose, x0, omega, prox, coeff_path, save_x_interval )
 
-def fista( y, A, At, tol_fun, tol_x, max_iter, verbose, x0, omega, proximal) :
+def fista( y, A, At, tol_fun, tol_x, max_iter, verbose, x0, omega, proximal, coeff_path, save_x_interval ) :
     """
     Solve the regularised least squares problem
 
@@ -384,6 +384,9 @@ def fista( y, A, At, tol_fun, tol_x, max_iter, verbose, x0, omega, proximal) :
         grad = np.asarray(At.dot(res))
 
         # Update variables
+        if save_x_interval > 0 :
+                if iter % save_x_interval == 0:
+                        np.save( coeff_path + '/' + str(iter).zfill(4) + '.npy', x )
         iter += 1
         prev_obj = curr_obj
         prev_x = x.copy()
