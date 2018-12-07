@@ -18,6 +18,7 @@ import os
 import matplotlib.pyplot as plt
 import vtk
 from vtk.util.numpy_support import vtk_to_numpy
+import sys
 
 
 DESCRIPTION = """
@@ -39,20 +40,8 @@ def buildArgsParser():
     p = argparse.ArgumentParser(description=DESCRIPTION,
                                 formatter_class=argparse.RawTextHelpFormatter)
 
-    p.add_argument('dictionary_TRK_fibers_trk', action='store',
-    		help='Path of the form "/home/user/.../dictionary_TRK_fibers.trk"')
-
-    p.add_argument('results_pickleFilePath', action='store',
-    		help='Path of the form "/home/user/.../results.pickle"')
-
-    p.add_argument('compartment_IC_nii_gzFilePath', action='store',
-    		help='Path of the form "/home/user/.../compartment_IC.nii.gz"')
-
-    p.add_argument('norm_fib_npyFilePath', action='store',
-    		help='Path of the form "/home/user/.../norm_fib.npy"')
-
-    p.add_argument('weightsPath', action='store',
-    		help='Path of the form "/home/user/.../iterations" with only the .npy files storing the diameters, named with the number of the iteration (from 1.npy to 9999.npy)')
+    p.add_argument('commitOutputPath', action='store',
+    		help='Path of the form "/home/user/.../CommitOutput"')
 
     p.add_argument('streamlinesNumber', action='store',
 		help='the number of streamlines you want to compute')
@@ -67,6 +56,15 @@ def main():
     global parser
     global args
 
+#defining the model used (Stick or cylinder)
+model = None 
+if(os.path.isdir(args.commitOutputPath+"/Results_StickZeppelinBall")):
+    model = "Stick"
+elif(os.path.isdir(args.commitOutputPath+"/Results_CylinderZeppelinBall")):
+    model = "Cylinder"
+else:
+    print("No valide model")
+    sys.exit(0)
 
 #the weight files names has to be of the form xxxx.npy
 def normalize_file_name(list):
@@ -74,55 +72,114 @@ def normalize_file_name(list):
     while(i<len(list)):
         if list[i].endswith('.npy'):
             list[i] = list[i][:-4]
-            os.rename(args.weightsPath+'/'+list[i]+'.npy', args.weightsPath+'/'+list[i].zfill(4)+'.npy')
+            os.rename(args.commitOutputPath+"/Coeff_x_"+model+"ZeppelinBall/"+list[i]+'.npy', args.commitOutputPath+"/Coeff_x_"+model+"ZeppelinBall/"+list[i].zfill(4)+'.npy')
         i=i+1
     return
 
 ### formalizing the files names, load the streamlines and initial weights
 
-list_x_file = [file for file in os.listdir(args.weightsPath+'/') if file.endswith('.npy')]
+list_x_file = [file for file in os.listdir(args.commitOutputPath+"/Coeff_x_"+model+"ZeppelinBall/") if (file.endswith('.npy') and (file[:-4]).isdigit() )]
 normalize_file_name(list_x_file)
 list_x_file.sort()
 num_iteration=len(list_x_file)
+
 #number of streamlines we want to load
 num_computed_streamlines = int(args.streamlinesNumber)
+#interval of weights
+max_weight = 0;
+if(model == "Cylinder"):
+    file = open( args.commitOutputPath+"/Results_"+model+"ZeppelinBall/results.pickle",'rb' )
+    object_file = pickle.load( file )
 
+    Ra = np.linspace( 0.75,3.5,12 ) * 1E-6
 
-#computing diameter
-file = open( args.results_pickleFilePath,'rb' )
-object_file = pickle.load( file )
+    nIC = len(Ra)    # IC  atoms
+    nEC = 4          # EC  atoms
+    nISO = 1         # ISO atoms
 
-Ra = np.linspace( 0.75,3.5,12 ) * 1E-6
-
-nIC = len(Ra)    # IC  atoms
-nEC = 4          # EC  atoms
-nISO = 1         # ISO atoms
-
-nF = object_file[0]['optimization']['regularisation']['sizeIC']
-nE = object_file[0]['optimization']['regularisation']['sizeEC']
-nV = object_file[0]['optimization']['regularisation']['sizeISO']
-
-dim = nib.load(args.compartment_IC_nii_gzFilePath).get_data().shape
-
-norm_fib = np.load(args.norm_fib_npyFilePath)
-
-x_norm = np.load(args.weightsPath+'/'+list_x_file[0]+'.npy')
-
-num_ADI = np.zeros( nF )
-den_ADI = np.zeros( nF )
-
-for i in range(nIC):
-    den_ADI = den_ADI + x_norm[i*nF:(i+1)*nF]
-    num_ADI = num_ADI + x_norm[i*nF:(i+1)*nF] * Ra[i]
+    nF = object_file[0]['optimization']['regularisation']['sizeIC']
+    nE = object_file[0]['optimization']['regularisation']['sizeEC']
+    nV = object_file[0]['optimization']['regularisation']['sizeISO']
     
-ADI = 2 * ( num_ADI / ( den_ADI + np.spacing(1) ) ) * 1E6
-smallADI_safe = ADI[:num_computed_streamlines]
-weak_ADI = smallADI_safe[:1]
-big_ADI = smallADI_safe[:1]
-good_ADI = copy.copy(smallADI_safe)
+    dim = nib.load(args.commitOutputPath+"/Results_"+model+"ZeppelinBall/compartment_IC.nii.gz").get_data().shape
+    norm_fib = np.load(args.commitoutputPath+"/Coeff_x_"+model+"ZeppelinBall/norm_fib.npy")
+    for x in list_x_file:
+        #computing diameter
+        x_norm = np.load(args.commitOutputPath+"/Coeff_x_"+model+"ZeppelinBall/"+ x +'.npy')
+
+        num_ADI = np.zeros( nF )
+        den_ADI = np.zeros( nF )
+
+        for i in range(nIC):
+            den_ADI = den_ADI + x_norm[i*nF:(i+1)*nF]
+            num_ADI = num_ADI + x_norm[i*nF:(i+1)*nF] * Ra[i]
+    
+        Weight = 2 * ( num_ADI / ( den_ADI + np.spacing(1) ) ) * 1E6
+        smallWeight_safe = Weight[:num_computed_streamlines]
+        x_max = np.amax(smallWeight_safe)
+        if(x_max>max_weight):
+            max_weight=x_max
+else:#model==Stick
+    file = open( args.commitOutputPath+"/Results_"+model+"ZeppelinBall/results.pickle",'rb' )
+    object_file = pickle.load( file )
+    nF = object_file[0]['optimization']['regularisation']['sizeIC']
+    for x in list_x_file:
+        x_norm = np.load(args.commitOutputPath+"/Coeff_x_"+model+"ZeppelinBall/"+ x +'.npy')
+
+        Weight = object_file[2][:nF]  #signal fractions
+        smallWeight_safe = Weight[:num_computed_streamlines]
+        x_max = np.amax(smallWeight_safe)
+        if(x_max>max_weight):
+            max_weight=x_max
+
+if(model == "Cylinder"):
+    #computing diameter
+    file = open( args.commitOutputPath+"/Results_"+model+"ZeppelinBall/results.pickle",'rb' )
+    object_file = pickle.load( file )
+
+    Ra = np.linspace( 0.75,3.5,12 ) * 1E-6
+
+    nIC = len(Ra)    # IC  atoms
+    nEC = 4          # EC  atoms
+    nISO = 1         # ISO atoms
+
+    nF = object_file[0]['optimization']['regularisation']['sizeIC']
+    nE = object_file[0]['optimization']['regularisation']['sizeEC']
+    nV = object_file[0]['optimization']['regularisation']['sizeISO']
+
+    dim = nib.load(args.commitOutputPath+"/Results_"+model+"ZeppelinBall/compartment_IC.nii.gz").get_data().shape
+
+
+    norm_fib = np.load(args.commitoutputPath+"/Coeff_x_"+model+"ZeppelinBall/norm_fib.npy")
+    #add the normalisation
+    x_norm = np.load(args.commitOutputPath+"/Coeff_x_"+model+"ZeppelinBall/"+list_x_file[0]+'.npy')
+
+    num_ADI = np.zeros( nF )
+    den_ADI = np.zeros( nF )
+
+    for i in range(nIC):
+        den_ADI = den_ADI + x_norm[i*nF:(i+1)*nF]
+        num_ADI = num_ADI + x_norm[i*nF:(i+1)*nF] * Ra[i]
+    
+    Weight = 2 * ( num_ADI / ( den_ADI + np.spacing(1) ) ) * 1E6
+    smallWeight_safe = Weight[:num_computed_streamlines]
+    weak_Weight = smallWeight_safe[:1]
+    big_Weight = smallWeight_safe[:1]
+    good_Weight = copy.copy(smallWeight_safe)
+else:#model==Stick
+    file = open( args.commitOutputPath+"/Results_"+model+"ZeppelinBall/results.pickle",'rb' )
+    object_file = pickle.load( file )
+    nF = object_file[0]['optimization']['regularisation']['sizeIC']
+    x_norm = np.load(args.commitOutputPath+"/Coeff_x_"+model+"ZeppelinBall/"+list_x_file[0]+'.npy')
+
+    Weight = object_file[2][:nF]  #signal fractions
+    smallWeight_safe = Weight[:num_computed_streamlines]
+    weak_Weight = smallWeight_safe[:1]
+    big_Weight = smallWeight_safe[:1]
+    good_Weight = copy.copy(smallWeight_safe)
 
 #computing streamlines
-streams, hdr = nib.trackvis.read(args.dictionary_TRK_fibers_trk)
+streams, hdr = nib.trackvis.read(args.commitOutputPath+"/dictionary_TRK_fibers.trk")   #######dictionary_TRK_fibers_trk)
 streamlines = [s[0] for s in streams]
 smallBundle_safe = streamlines[:num_computed_streamlines]
 weak_bundle = smallBundle_safe[:1]
@@ -138,15 +195,15 @@ hue = [0, 0]  # red only
 saturation = [0.0, 1.0]  # black to white
 
 lut_cmap = actor.colormap_lookup_table(
-    scale_range=(0, 7),
+    scale_range=(0, max_weight),
     hue_range=hue,
     saturation_range=saturation)
 
-weak_stream_actor = actor.line(weak_bundle, weak_ADI,
+weak_stream_actor = actor.line(weak_bundle, weak_Weight,
                                lookup_colormap=lut_cmap)
-big_stream_actor = actor.line(big_bundle, big_ADI,
+big_stream_actor = actor.line(big_bundle, big_Weight,
                             lookup_colormap=lut_cmap)
-good_stream_actor = actor.line(good_bundle, good_ADI,
+good_stream_actor = actor.line(good_bundle, good_Weight,
                            lookup_colormap=lut_cmap)
 
 bar = actor.scalar_bar(lut_cmap, title = 'diameter')
@@ -178,7 +235,7 @@ def refresh_showManager(i_ren, obj, slider):
 def add_graphe(i_ren, obj, slider):
     fig = plt.figure()
     ax = fig.add_subplot(111)
-    n, bins, rectangles = ax.hist(x=smallADI_safe, bins=50, density=False, label = 'graphe')
+    n, bins, rectangles = ax.hist(x=smallWeight_safe, bins=50, density=False, label = 'graphe')
     plt.xlabel('weight')
     plt.ylabel('number of streamlines')
     plt.title('histogram of iteration '+str(list_x_file[int(change_iteration_slider.value)]))
@@ -190,30 +247,30 @@ def add_graphe(i_ren, obj, slider):
 
 #function to separate the streamlines in 3x2 arrayes according to the sliders
 def refresh_3x2_arrays():
-    global weak_ADI
+    global weak_Weight
     global weak_bundle
-    global big_ADI
+    global big_Weight
     global big_bundle
-    global good_ADI
+    global good_Weight
     global good_bundle
 
     big_bundle = []
-    big_ADI = []
+    big_Weight = []
     good_bundle = []
-    good_ADI = []
+    good_Weight = []
     weak_bundle = []
-    weak_ADI = []
+    weak_Weight = []
 
     i=0
-    while(i<len(smallADI_safe)):
-        if(smallADI_safe[i]<remove_small_weights_slider.value):
-            weak_ADI.append(smallADI_safe[i])
+    while(i<len(smallWeight_safe)):
+        if(smallWeight_safe[i]<remove_small_weights_slider.value):
+            weak_Weight.append(smallWeight_safe[i])
             weak_bundle.append(smallBundle_safe[i])
-        elif(smallADI_safe[i]>remove_big_weights_slider.value):
-            big_ADI.append(smallADI_safe[i])
+        elif(smallWeight_safe[i]>remove_big_weights_slider.value):
+            big_Weight.append(smallWeight_safe[i])
             big_bundle.append(smallBundle_safe[i])
         else:
-            good_ADI.append(smallADI_safe[i])
+            good_Weight.append(smallWeight_safe[i])
             good_bundle.append(smallBundle_safe[i])
         i=i+1
     return
@@ -232,29 +289,29 @@ def refresh_3_stream_actors():
     
     #adding the 3 (weak, good, big) actors to the renderer 
     if(change_colormap_slider.value<=change_colormap_slider.max_value/2):
-        if(len(good_ADI)>0):
-            good_stream_actor = actor.line(good_bundle, good_ADI,
+        if(len(good_Weight)>0):
+            good_stream_actor = actor.line(good_bundle, good_Weight,
                               lookup_colormap=lut_cmap)
             renderer.add(good_stream_actor)
-        if(len(weak_ADI)>0):
-            weak_stream_actor = actor.line(weak_bundle, weak_ADI,
+        if(len(weak_Weight)>0):
+            weak_stream_actor = actor.line(weak_bundle, weak_Weight,
                               opacity =opacity_slider.value,
                               lookup_colormap=lut_cmap)
             renderer.add(weak_stream_actor)
-        if(len(big_ADI)>0):
-            big_stream_actor = actor.line(big_bundle, big_ADI,
+        if(len(big_Weight)>0):
+            big_stream_actor = actor.line(big_bundle, big_Weight,
                               opacity =opacity_slider.value,
                               lookup_colormap=lut_cmap)
             renderer.add(big_stream_actor)
     else:
-        if(len(good_ADI)>0):
+        if(len(good_Weight)>0):
             good_stream_actor = actor.line(good_bundle)
             renderer.add(good_stream_actor)
-        if(len(weak_ADI)>0):
+        if(len(weak_Weight)>0):
             weak_stream_actor = actor.line(weak_bundle,
                               opacity =opacity_slider.value)
             renderer.add(weak_stream_actor)
-        if(len(big_ADI)>0):
+        if(len(big_Weight)>0):
             big_stream_actor = actor.line(big_bundle,
                               opacity =opacity_slider.value)
             renderer.add(big_stream_actor)
@@ -275,27 +332,33 @@ def change_colormap(i_ren, obj, slider):
         
 #function called by the iteration's slider
 def change_iteration(i_ren, obj, slider):
-    global ADI
-    global smallADI_safe
+    global Weight
+    global smallWeight_safe
     
-    #load the weights of the correct iteration according to the slider
-    x_norm = np.load(args.weightsPath+'/'+list_x_file[int(slider.value)]+'.npy')
+    if(model == "Cylinder"):
+        #load the weights of the correct iteration according to the slider
+        x_norm = np.load(args.commitOutputPath+"/Coeff_x_"+model+"ZeppelinBall/"+list_x_file[int(slider.value)]+'.npy')
     
-    num_ADI = np.zeros( nF )
-    den_ADI = np.zeros( nF )
+        num_ADI = np.zeros( nF )
+        den_ADI = np.zeros( nF )
 
-    for i in range(nIC):
-        den_ADI = den_ADI + x_norm[i*nF:(i+1)*nF]
-        num_ADI = num_ADI + x_norm[i*nF:(i+1)*nF] * Ra[i]
+        for i in range(nIC):
+            den_ADI = den_ADI + x_norm[i*nF:(i+1)*nF]
+            num_ADI = num_ADI + x_norm[i*nF:(i+1)*nF] * Ra[i]
     
-    ADI = 2 * ( num_ADI / ( den_ADI + np.spacing(1) ) ) * 1E6
-    smallADI_safe = ADI[:num_computed_streamlines]
-    
+        Weight = 2 * ( num_ADI / ( den_ADI + np.spacing(1) ) ) * 1E6
+        smallWeight_safe = Weight[:num_computed_streamlines]
+    else:#model==Stick
+        #load the weights of the correct iteration according to the slider
+        x_norm = np.load(args.commitOutputPath+"/Coeff_x_"+model+"ZeppelinBall/"+list_x_file[int(slider.value)]+'.npy')
+
+        Weight = object_file[2][:nF]  #signal fractions
+        smallWeight_safe = Weight[:num_computed_streamlines]
     
     refresh_3x2_arrays()
     refresh_3_stream_actors()
     #updating the number of good streamlines and the name of the iteration slider
-    numbers_of_streamlines_in_interval.message = "Number of streamlines in interval: "+str(len(good_ADI))
+    numbers_of_streamlines_in_interval.message = "Number of streamlines in interval: "+str(len(good_Weight))
     slider.text_template=list_x_file[int(slider.value)]
     refresh_showManager(i_ren, obj, slider)
     return
@@ -307,7 +370,7 @@ def remove_big_weight(i_ren, obj, slider):
     refresh_3x2_arrays()
     refresh_3_stream_actors()
     #updating the number of good streamlines
-    numbers_of_streamlines_in_interval.message = "Number of streamlines in interval: "+str(len(good_ADI)) 
+    numbers_of_streamlines_in_interval.message = "Number of streamlines in interval: "+str(len(good_Weight)) 
     refresh_showManager(i_ren, obj, slider)
     return
 
@@ -318,7 +381,7 @@ def remove_small_weight(i_ren, obj, slider):
     refresh_3x2_arrays() 
     refresh_3_stream_actors()
     #updating the number of good streamlines
-    numbers_of_streamlines_in_interval.message = "Number of streamlines in interval: "+str(len(good_ADI))
+    numbers_of_streamlines_in_interval.message = "Number of streamlines in interval: "+str(len(good_Weight))
     refresh_showManager(i_ren, obj, slider)
     return
 
@@ -339,7 +402,7 @@ def change_streamlines_color(i_ren, obj, slider):
     #refreshing the hue and lut_cmap
     hue = [0, slider.value]
     lut_cmap = actor.colormap_lookup_table(
-        scale_range=(0, 7),
+        scale_range=(0, max_weight),
         hue_range=hue,
         saturation_range=saturation)
     
@@ -415,13 +478,13 @@ change_iteration_slider = ui.LineSlider2D(min_value=0,
                                 length=140)
 
 remove_big_weights_slider = ui.LineSlider2D(min_value=0,
-                                max_value=7,
-                                initial_value=7,
+                                max_value=max_weight,
+                                initial_value=max_weight,
                                 text_template="{value:.2f}",
                                 length=140)
 
 remove_small_weights_slider = ui.LineSlider2D(min_value=0,
-                                max_value=7,
+                                max_value=max_weight,
                                 initial_value=0,
                                 text_template="{value:.2f}",
                                 length=140)
