@@ -19,3 +19,9 @@ class VolumeFractions( amico.models.VolumeFractions ) :
     See the AMICO.model module for details.
     """
     pass
+
+class MC_CylinderZeppelinBall( amico.models.MC_CylinderZeppelinBall ) :
+    """Simulate the response functions according to the Cylinder-Zeppelin-Ball model.
+    See the AMICO.model module for details.
+    """
+    pass
