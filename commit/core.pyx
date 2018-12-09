@@ -72,6 +72,8 @@ cdef class Evaluation :
         self.set_config('doMergeB0', False)
         self.set_config('doNormalizeKernels', True)
         self.set_config('doDemean', False)
+        self.set_config('doNormalizeMaps', False)
+
 
 
     def set_config( self, key, value ) :
@@ -612,8 +614,18 @@ cdef class Evaluation :
 
         print '   [ %.1f seconds ]' % ( time.time() - tic )
 
+    def get_y( self ):
+        """
+        Returns a numpy array that corresponds to the 'y' vector of the optimisation problem.
+        NB: this can be run only after having loaded the dictionary and the data.
+        """
+        if self.DICTIONARY is None :
+            raise RuntimeError( 'Dictionary not loaded; call "load_dictionary()" first.' )
+        if self.niiDWI is None :
+            raise RuntimeError( 'Data not loaded; call "load_data()" first.' )
+        return self.niiDWI_img[ self.DICTIONARY['MASK_ix'], self.DICTIONARY['MASK_iy'], self.DICTIONARY['MASK_iz'], : ].flatten().astype(np.float64)
 
-    def fit( self, tol_fun = 1e-3, max_iter = 100, verbose = 1, x0 = None ) :
+    def fit( self, tol_fun = 1e-3, tol_x = 1e-6, max_iter = 100, verbose = 1, x0 = None, regularisation = None, save_x_suffix = None, save_x_interval = 0 ) :
         """Fit the model to the data.
 
         Parameters
@@ -624,6 +636,13 @@ cdef class Evaluation :
             Maximum number of iterations (default : 100)
         verbose : integer
             Level of verbosity: 0=no print, 1=print progress (default : 1)
+        x0 : np.array
+            Initial guess for the solution of the problem (default : None)
+        regularisation : commit.solvers.init_regularisation object
+            Python dictionary that describes the wanted regularisation term.
+            Check the documentation of commit.solvers.init_regularisation to see
+            how to properly define the wanted mathematical formulation
+            ( default : None )
         """
         if self.niiDWI is None :
             raise RuntimeError( 'Data not loaded; call "load_data()" first.' )
@@ -635,31 +654,87 @@ cdef class Evaluation :
             raise RuntimeError( 'Threads not set; call "set_threads()" first.' )
         if self.A is None :
             raise RuntimeError( 'Operator not built; call "build_operator()" first.' )
+
+        # Debug mode on
+        COEFF_path = 'Coeff_x_' + self.model.id
+        if save_x_suffix :
+            self.set_config('path_suffix', save_x_suffix)
+            COEFF_path = COEFF_path + save_x_suffix
+
+        print '\n-> Saving coefficients x to "%s/*":' % COEFF_path
+        tic = time.time()
+
+        # create folder or delete existing files (if any)
+        COEFF_path = pjoin( self.get_config('TRACKING_path'), COEFF_path )
+        if not exists( COEFF_path ) :
+            makedirs( COEFF_path )
+        else :
+            for f in glob.glob( pjoin(COEFF_path,'*') ) :
+                remove( f )
+        self.set_config('COEFF_path', COEFF_path)
+
+
         if x0 is not None :
             if x0.shape[0] != self.A.shape[1] :
-                raise RuntimeError( 'x0: dimension do not match' )
+                raise RuntimeError( 'x0: dimension does not match the number of columns of the dictionary.' )
+        if regularisation is None :
+            regularisation = commit.solvers.init_regularisation(self)
 
-        self.CONFIG['optimization'] = {}
-        self.CONFIG['optimization']['tol_fun']  = tol_fun
-        self.CONFIG['optimization']['max_iter'] = max_iter
-        self.CONFIG['optimization']['verbose']  = verbose
+        self.CONFIG['optimization']                   = {}
+        self.CONFIG['optimization']['tol_fun']        = tol_fun
+        self.CONFIG['optimization']['tol_x']          = tol_x
+        self.CONFIG['optimization']['max_iter']       = max_iter
+        self.CONFIG['optimization']['verbose']        = verbose
+        self.CONFIG['optimization']['regularisation'] = regularisation
 
         # run solver
         t = time.time()
-        print '\n-> Fit model using "nnls":'
-        Y = self.niiDWI_img[ self.DICTIONARY['MASK_ix'], self.DICTIONARY['MASK_iy'], self.DICTIONARY['MASK_iz'], : ].flatten().astype(np.float64)
-        self.x = commit.solvers.nnls( Y, self.A, tol_fun=tol_fun, max_iter=max_iter, verbose=verbose, x0=x0 )
+        print '\n-> Fit model'
+
+        self.x, opt_details = commit.solvers.solve(self.get_y(), self.A, self.A.T, tol_fun = tol_fun, tol_x = tol_x, max_iter = max_iter, verbose = verbose, x0 = x0, regularisation = regularisation, coeff_path = COEFF_path, save_x_interval = save_x_interval )
+
+        nF = self.DICTIONARY['IC']['nF']
+        nE = self.DICTIONARY['EC']['nE']
+        nV = self.DICTIONARY['nV']
+        norm_fib = np.ones( nF )
+        # x is the x of the original problem
+        # self.x is the x preconditioned
+        if self.get_config('doNormalizeKernels') :
+            # renormalize the coefficients
+            norm1 = np.repeat(self.KERNELS['wmr_norm'],nF)
+            norm2 = np.repeat(self.KERNELS['wmh_norm'],nE)
+            norm3 = np.repeat(self.KERNELS['iso_norm'],nV)
+            norm_fib = np.kron(np.ones(self.KERNELS['wmr'].shape[0]), self.DICTIONARY['TRK']['norm'])
+            if save_x_interval > 0:
+                np.save( COEFF_path + '/norm1.npy', norm1 )
+                np.save( COEFF_path + '/norm2.npy', norm2 )
+                np.save( COEFF_path + '/norm3.npy', norm3 )
+                np.save( COEFF_path + '/norm_fib.npy', norm_fib )
+
+        self.CONFIG['optimization']['fit_details'] = opt_details
         self.CONFIG['optimization']['fit_time'] = time.time()-t
+
         print '   [ %s ]' % ( time.strftime("%Hh %Mm %Ss", time.gmtime(self.CONFIG['optimization']['fit_time']) ) )
 
 
-    def save_results( self, path_suffix = None ) :
+    def save_results( self, path_suffix = None, save_opt_details = True, save_coeff = False, save_x_suffix = None ) :
         """Save the output (coefficients, errors, maps etc).
 
         Parameters
         ----------
         path_suffix : string
             Text to be appended to "Results" to create the output path (default : None)
+        save_opt_details : boolean
+            Save everything in a pickle file containing the following list L:
+                L[0]: dictionary with all the configuration details
+                L[1]: np.array obtained through the optimisation process with the normalised kernels
+                L[2]: np.array renormalisation of L[1]
+            (default : True)
+        save_coeff : boolean
+            Save three txt files containing the coefficients related to each
+            compartment and a pickle file containing the dictionary with all
+            the configuration details.
+            (default : False)
         """
         if self.x is None :
             raise RuntimeError( 'Model not fitted to the data; call "fit()" first.' )
@@ -682,8 +757,8 @@ cdef class Evaluation :
         self.set_config('RESULTS_path', RESULTS_path)
 
         # Configuration and results
-        print '\t* configuration and results...',
-        sys.stdout.flush()
+        print '\t* configuration and results:'
+
         nF = self.DICTIONARY['IC']['nF']
         nE = self.DICTIONARY['EC']['nE']
         nV = self.DICTIONARY['nV']
@@ -696,17 +771,31 @@ cdef class Evaluation :
             norm2 = np.repeat(self.KERNELS['wmh_norm'],nE)
             norm3 = np.repeat(self.KERNELS['iso_norm'],nV)
             norm_fib = np.kron(np.ones(self.KERNELS['wmr'].shape[0]), self.DICTIONARY['TRK']['norm'])
+
             x = self.x / np.hstack( (norm1*norm_fib,norm2,norm3) )
         else :
             x = self.x
-        with open( pjoin(RESULTS_path,'results.pickle'), 'wb+' ) as fid :
-            cPickle.dump( [self.CONFIG, self.x, x], fid, protocol=2 )
-        print '[ OK ]'
+        if save_opt_details:
+            print '\t\t- pickle... ',
+            sys.stdout.flush()
+            with open( pjoin(RESULTS_path,'results.pickle'), 'wb+' ) as fid :
+                cPickle.dump( [self.CONFIG, self.x, x], fid, protocol=2 )
+            print '[ OK ]'
+        if save_coeff:
+            print '\t\t- txt... ',
+            sys.stdout.flush()
+            np.savetxt(pjoin(RESULTS_path,'xic.txt'), x[0:nF])
+            np.savetxt(pjoin(RESULTS_path,'xec.txt'), x[nF:nF+nE])
+            np.savetxt(pjoin(RESULTS_path,'xiso.txt'), x[(nF+nE):])
+            with open( pjoin(RESULTS_path,'config.pickle'), 'wb+' ) as fid :
+                cPickle.dump( self.CONFIG, fid, protocol=2 )
+            print '[ OK ]'
+
 
         # Map of wovelwise errort
         print '\t* fitting errors:'
 
-        not_NaN = 1e-16 * np.ones( self.get_config('dim'), dtype=np.float32 )
+        not_NaN = np.ones( self.get_config('dim'), dtype=np.float32 ) * 1e-16 # avoid division by 0
 
         niiMAP_img = np.zeros( self.get_config('dim'), dtype=np.float32 )
         affine = self.niiDWI.affine if nibabel.__version__ >= '2.0.0' else self.niiDWI.get_affine()
@@ -724,6 +813,9 @@ cdef class Evaluation :
         niiMAP_hdr['cal_max'] = tmp.max()
         nibabel.save( niiMAP, pjoin(RESULTS_path,'fit_RMSE.nii.gz') )
         print ' [ %.3f +/- %.3f ]' % ( tmp.mean(), tmp.std() )
+        self.CONFIG['map'] = {}
+        self.CONFIG['map']['RMSE mean'] = round(tmp.mean(), 3)
+        self.CONFIG['map']['RMSE std'] = round(tmp.std(), 3)
 
         print '\t\t- NRMSE...',
         sys.stdout.flush()
@@ -737,6 +829,8 @@ cdef class Evaluation :
         niiMAP_hdr['cal_max'] = 1
         nibabel.save( niiMAP, pjoin(RESULTS_path,'fit_NRMSE.nii.gz') )
         print '[ %.3f +/- %.3f ]' % ( tmp.mean(), tmp.std() )
+        self.CONFIG['map']['NRMSE mean'] = round(tmp.mean(), 3)
+        self.CONFIG['map']['NRMSE std'] = round(tmp.std(), 3)
 
         # Map of compartment contributions
         print '\t* voxelwise contributions:'
@@ -772,13 +866,18 @@ cdef class Evaluation :
             niiISO_img[ self.DICTIONARY['MASK_ix'], self.DICTIONARY['MASK_iy'], self.DICTIONARY['MASK_iz'] ] = xv
         print '   [ OK ]'
 
-        niiIC = nibabel.Nifti1Image( niiIC_img / ( niiIC_img + niiEC_img + niiISO_img ), affine )
-        niiEC = nibabel.Nifti1Image( niiEC_img / ( niiIC_img + niiEC_img + niiISO_img ), affine )
-        niiISO = nibabel.Nifti1Image( niiISO_img / ( niiIC_img + niiEC_img + niiISO_img ), affine )
+        if self.get_config('doNormalizeMaps') :
+                niiIC = nibabel.Nifti1Image( niiIC_img / ( niiIC_img + niiEC_img + niiISO_img + not_NaN), affine )
+                niiEC = nibabel.Nifti1Image( niiEC_img / ( niiIC_img + niiEC_img + niiISO_img + not_NaN), affine )
+                niiISO = nibabel.Nifti1Image( niiISO_img / ( niiIC_img + niiEC_img + niiISO_img + not_NaN), affine )
+        else:
+                niiIC = nibabel.Nifti1Image( niiIC_img, affine )
+                niiEC = nibabel.Nifti1Image( niiEC_img, affine )
+                niiISO = nibabel.Nifti1Image( niiISO_img, affine )
+
         nibabel.save( niiIC , pjoin(RESULTS_path,'compartment_IC.nii.gz') )
         nibabel.save( niiEC , pjoin(RESULTS_path,'compartment_EC.nii.gz') )
         nibabel.save( niiISO , pjoin(RESULTS_path,'compartment_ISO.nii.gz') )
-
 
         d1 = len(self.d_par)
         d2 = len(self.T2s)
@@ -847,5 +946,8 @@ cdef class Evaluation :
 
         niiECd_par = nibabel.Nifti1Image( niiECd_par_img / (niiEC_img + not_NaN ), affine )
         nibabel.save( niiECd_par , pjoin(RESULTS_path,'compartment_d_par_EC.nii.gz'))
+
+        with open( pjoin(RESULTS_path,'results.pickle'), 'wb+' ) as fid :
+            cPickle.dump( [self.CONFIG, self.x, x], fid, protocol=2 )
 
         print '   [ %.1f seconds ]' % ( time.time() - tic )
