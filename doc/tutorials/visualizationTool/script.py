@@ -20,7 +20,6 @@ import vtk
 from vtk.util.numpy_support import vtk_to_numpy
 import sys
 
-
 DESCRIPTION = """
     Description....
         Visualize the diameters of streamlines.
@@ -57,8 +56,13 @@ def main():
     global args
 
 #defining the model used (Stick or cylinder)
-model = None 
-if(os.path.isdir(args.commitOutputPath+"/Results_StickZeppelinBall")):
+model = None
+model_index = 0
+if(os.path.isdir(args.commitOutputPath+"/Results_StickZeppelinBall") and os.path.isdir(args.commitOutputPath+"/Results_CylinderZeppelinBall")):
+    model_index = input("Which model do you want to load (1 for 'Cylinder', 2 for 'Stick') : ")
+    if(model_index==1): model = "Cylinder"
+    else: model ="Stick"
+elif(os.path.isdir(args.commitOutputPath+"/Results_StickZeppelinBall")):
     model = "Stick"
 elif(os.path.isdir(args.commitOutputPath+"/Results_CylinderZeppelinBall")):
     model = "Cylinder"
@@ -100,15 +104,20 @@ if(model == "Cylinder"):
     nF = object_file[0]['optimization']['regularisation']['sizeIC']
     nE = object_file[0]['optimization']['regularisation']['sizeEC']
     nV = object_file[0]['optimization']['regularisation']['sizeISO']
+
+    
+    num_ADI = np.zeros( nF )
+    den_ADI = np.zeros( nF )
     
     dim = nib.load(args.commitOutputPath+"/Results_"+model+"ZeppelinBall/compartment_IC.nii.gz").get_data().shape
-    norm_fib = np.load(args.commitoutputPath+"/Coeff_x_"+model+"ZeppelinBall/norm_fib.npy")
-    for x in list_x_file:
+    norm_fib = np.load(args.commitOutputPath+"/Coeff_x_"+model+"ZeppelinBall/norm_fib.npy")
+    norm1 = np.load(args.commitOutputPath+"/Coeff_x_"+model+"ZeppelinBall/norm1.npy")
+    norm2 = np.load(args.commitOutputPath+"/Coeff_x_"+model+"ZeppelinBall/norm2.npy")
+    norm3 = np.load(args.commitOutputPath+"/Coeff_x_"+model+"ZeppelinBall/norm3.npy")
+    for itNbr in list_x_file:
         #computing diameter
-        x_norm = np.load(args.commitOutputPath+"/Coeff_x_"+model+"ZeppelinBall/"+ x +'.npy')
-
-        num_ADI = np.zeros( nF )
-        den_ADI = np.zeros( nF )
+        x = np.load(args.commitOutputPath+"/Coeff_x_"+model+"ZeppelinBall/"+ itNbr +'.npy')
+        x_norm = x / np.hstack( (norm1*norm_fib,norm2,norm3) )
 
         for i in range(nIC):
             den_ADI = den_ADI + x_norm[i*nF:(i+1)*nF]
@@ -116,21 +125,26 @@ if(model == "Cylinder"):
     
         Weight = 2 * ( num_ADI / ( den_ADI + np.spacing(1) ) ) * 1E6
         smallWeight_safe = Weight[:num_computed_streamlines]
-        x_max = np.amax(smallWeight_safe)
-        if(x_max>max_weight):
-            max_weight=x_max
+        itNbr_max = np.amax(smallWeight_safe)
+        if(itNbr_max>max_weight):
+            max_weight=itNbr_max
 else:#model==Stick
     file = open( args.commitOutputPath+"/Results_"+model+"ZeppelinBall/results.pickle",'rb' )
     object_file = pickle.load( file )
+    norm_fib = np.load(args.commitOutputPath+"/Coeff_x_"+model+"ZeppelinBall/norm_fib.npy")
+    norm1 = np.load(args.commitOutputPath+"/Coeff_x_"+model+"ZeppelinBall/norm1.npy")
+    norm2 = np.load(args.commitOutputPath+"/Coeff_x_"+model+"ZeppelinBall/norm2.npy")
+    norm3 = np.load(args.commitOutputPath+"/Coeff_x_"+model+"ZeppelinBall/norm3.npy")
     nF = object_file[0]['optimization']['regularisation']['sizeIC']
-    for x in list_x_file:
-        x_norm = np.load(args.commitOutputPath+"/Coeff_x_"+model+"ZeppelinBall/"+ x +'.npy')
+    for itNbr in list_x_file:
+        x = np.load(args.commitOutputPath+"/Coeff_x_"+model+"ZeppelinBall/"+ itNbr +'.npy')
+        x_norm = x / np.hstack( (norm1*norm_fib,norm2,norm3) )
 
-        Weight = object_file[2][:nF]  #signal fractions
+        Weight = x_norm[:nF]  #signal fractions
         smallWeight_safe = Weight[:num_computed_streamlines]
-        x_max = np.amax(smallWeight_safe)
-        if(x_max>max_weight):
-            max_weight=x_max
+        itNbr_max = np.amax(smallWeight_safe)
+        if(itNbr_max>max_weight):
+            max_weight=itNbr_max
 
 if(model == "Cylinder"):
     #computing diameter
@@ -150,9 +164,13 @@ if(model == "Cylinder"):
     dim = nib.load(args.commitOutputPath+"/Results_"+model+"ZeppelinBall/compartment_IC.nii.gz").get_data().shape
 
 
-    norm_fib = np.load(args.commitoutputPath+"/Coeff_x_"+model+"ZeppelinBall/norm_fib.npy")
+    norm_fib = np.load(args.commitOutputPath+"/Coeff_x_"+model+"ZeppelinBall/norm_fib.npy")
     #add the normalisation
-    x_norm = np.load(args.commitOutputPath+"/Coeff_x_"+model+"ZeppelinBall/"+list_x_file[0]+'.npy')
+    x = np.load(args.commitOutputPath+"/Coeff_x_"+model+"ZeppelinBall/"+list_x_file[0]+'.npy')
+    norm1 = np.load(args.commitOutputPath+"/Coeff_x_"+model+"ZeppelinBall/norm1.npy")
+    norm2 = np.load(args.commitOutputPath+"/Coeff_x_"+model+"ZeppelinBall/norm2.npy")
+    norm3 = np.load(args.commitOutputPath+"/Coeff_x_"+model+"ZeppelinBall/norm3.npy")
+    x_norm = x / np.hstack( (norm1*norm_fib,norm2,norm3) )
 
     num_ADI = np.zeros( nF )
     den_ADI = np.zeros( nF )
@@ -170,9 +188,13 @@ else:#model==Stick
     file = open( args.commitOutputPath+"/Results_"+model+"ZeppelinBall/results.pickle",'rb' )
     object_file = pickle.load( file )
     nF = object_file[0]['optimization']['regularisation']['sizeIC']
-    x_norm = np.load(args.commitOutputPath+"/Coeff_x_"+model+"ZeppelinBall/"+list_x_file[0]+'.npy')
+    x = np.load(args.commitOutputPath+"/Coeff_x_"+model+"ZeppelinBall/"+list_x_file[0]+'.npy')
+    norm1 = np.load(args.commitOutputPath+"/Coeff_x_"+model+"ZeppelinBall/norm1.npy")
+    norm2 = np.load(args.commitOutputPath+"/Coeff_x_"+model+"ZeppelinBall/norm2.npy")
+    norm3 = np.load(args.commitOutputPath+"/Coeff_x_"+model+"ZeppelinBall/norm3.npy")
+    x_norm = x / np.hstack( (norm1*norm_fib,norm2,norm3) )
 
-    Weight = object_file[2][:nF]  #signal fractions
+    Weight = x_norm[:nF]  #signal fractions
     smallWeight_safe = Weight[:num_computed_streamlines]
     weak_Weight = smallWeight_safe[:1]
     big_Weight = smallWeight_safe[:1]
@@ -337,8 +359,9 @@ def change_iteration(i_ren, obj, slider):
     
     if(model == "Cylinder"):
         #load the weights of the correct iteration according to the slider
-        x_norm = np.load(args.commitOutputPath+"/Coeff_x_"+model+"ZeppelinBall/"+list_x_file[int(slider.value)]+'.npy')
-    
+        x = np.load(args.commitOutputPath+"/Coeff_x_"+model+"ZeppelinBall/"+list_x_file[int(slider.value)]+'.npy')
+        x_norm = x / np.hstack( (norm1*norm_fib,norm2,norm3) )
+
         num_ADI = np.zeros( nF )
         den_ADI = np.zeros( nF )
 
@@ -350,9 +373,10 @@ def change_iteration(i_ren, obj, slider):
         smallWeight_safe = Weight[:num_computed_streamlines]
     else:#model==Stick
         #load the weights of the correct iteration according to the slider
-        x_norm = np.load(args.commitOutputPath+"/Coeff_x_"+model+"ZeppelinBall/"+list_x_file[int(slider.value)]+'.npy')
+        x = np.load(args.commitOutputPath+"/Coeff_x_"+model+"ZeppelinBall/"+list_x_file[int(slider.value)]+'.npy')
+        x_norm = x / np.hstack( (norm1*norm_fib,norm2,norm3) )
 
-        Weight = object_file[2][:nF]  #signal fractions
+        Weight = x_norm[:nF]  #signal fractions
         smallWeight_safe = Weight[:num_computed_streamlines]
     
     refresh_3x2_arrays()
