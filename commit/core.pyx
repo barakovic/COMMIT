@@ -887,7 +887,7 @@ cdef class Evaluation :
         niiICT2_img = np.zeros( self.get_config('dim'), dtype=np.float32 )
         if len(self.KERNELS['wmr']) > 0 :
             offset = nF * self.KERNELS['wmr'].shape[0]
-            tmp = ( x[:offset].reshape(-1, nF * d2 ) * norm_fib.reshape(-1, nF * d2 ) ).sum( axis=0 )
+            tmp = ( x[:offset].reshape(-1, nF * d2 ) ).sum( axis=0 )
             tmp1 = tmp.reshape(-1,nF)
             IC_T2 = np.dot( self.T2s, tmp1 )
             xv = np.bincount( self.DICTIONARY['IC']['v'], minlength=nV, weights=IC_T2[ self.DICTIONARY['IC']['fiber'] ] * self.DICTIONARY['IC']['len']).astype(np.float32)
@@ -903,7 +903,7 @@ cdef class Evaluation :
         niiICd_par_img = np.zeros( self.get_config('dim'), dtype=np.float32 )
         if len(self.KERNELS['wmr']) > 0 :
             offset = nF * self.KERNELS['wmr'].shape[0]
-            tmp = ( x[:offset].reshape(-1, nF * d2 ) * norm_fib.reshape(-1, nF * d2 ) )
+            tmp = ( x[:offset].reshape(-1, nF * d2 ) )
             tmp2 = np.zeros((d1, nF))
             for i in range (d1):
                 tmp2[i] = np.reshape(tmp[i], (-1,nF)).sum(axis=0)
