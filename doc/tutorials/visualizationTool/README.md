@@ -26,4 +26,4 @@ You should see something like this:
 
 ## how to use the visualization tool
 
-
+![treshold](https://github.com/LorisPilotto/COMMIT/blob/pilotto_project/doc/tutorials/visualizationTool/treshold.png)
