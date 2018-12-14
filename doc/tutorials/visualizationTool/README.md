@@ -30,6 +30,7 @@ You should see something like this:
 
 ![treshold](https://github.com/LorisPilotto/COMMIT/blob/pilotto_project/doc/tutorials/visualizationTool/treshold.png)
 Once on the program, you can move the sliders. The streamlines with a weight inside the pink box are the streamlines you find important. You can reduce the opacity of the streamlines with a weight outside the pink box with the lower slider (as showed on the image).
+You can also notice that "Number of streamlines in interval" alows you to know how much streamlines have their weight's value inside the pink box.
 
 ![colorblue](https://github.com/LorisPilotto/COMMIT/blob/pilotto_project/doc/tutorials/visualizationTool/colorblue.png)
 By moving the upper slider you can change the color of the streamlines
