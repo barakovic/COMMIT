@@ -11,7 +11,7 @@ Then, on the terminal go on the directory where the script is and type the comma
 ```
 python /home/.../CommitOutput/ 1000
 ```
-which will launch the program.
+which will launch the program and load 1000 streamlines.
 
 
 If you have both Cylinder and Stick commit's output, the terminal will show something like this:
@@ -30,3 +30,9 @@ You should see something like this:
 
 ![treshold](https://github.com/LorisPilotto/COMMIT/blob/pilotto_project/doc/tutorials/visualizationTool/treshold.png)
 Once on the program, you can move the sliders. The streamlines with a weight inside the pink box are the streamlines you find important. You can reduce the opacity of the streamlines with a weight outside the pink box with the lower slider (as showed on the image).
+
+![color](https://github.com/LorisPilotto/COMMIT/blob/pilotto_project/doc/tutorials/visualizationTool/color.png)
+By moving the upper slider you can change the color of the streamlines
+
+![direction](https://github.com/LorisPilotto/COMMIT/blob/pilotto_project/doc/tutorials/visualizationTool/direction.png)
+By moving the slider showed by the pink arrow you can change the color map. Putting the slider on the left allows you to see a mapping between streamlines and their weight. And by puting the slider on the right you can see the streamlines with a directionally-encoded color (other ffunctionality are still available).
