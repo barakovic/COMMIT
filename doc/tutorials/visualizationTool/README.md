@@ -22,7 +22,7 @@ Which model do you want to load (1 for 'Cylinder', 2 for 'Stick') :
 Select the model you want and press enter.
 
 You should see something like this:
-![launch](https://github.com/LorisPilotto/COMMIT/doc/tutorials/visualizationTool/launch.png)
+![launch](https://github.com/LorisPilotto/COMMIT/blob/pilotto_project/doc/tutorials/visualizationTool/launch.png)
 
 ## how to use the visualization tool
 
