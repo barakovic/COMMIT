@@ -37,8 +37,8 @@ The streamlines with a weight inside the pink box are the streamlines you find i
 You can also notice that "Number of streamlines in interval" alows you to know how much streamlines have their weight's value inside the pink box.
 
 - **Changing the colormap of the streamlines**
-![colorblue](https://github.com/LorisPilotto/COMMIT/blob/pilotto_project/doc/tutorials/visualizationTool/colorblue.png)
-By moving the upper slider you can change the color of the streamlines
+![color](https://github.com/LorisPilotto/COMMIT/blob/pilotto_project/doc/tutorials/visualizationTool/color.png)
+By moving the upper slider you can change the color of the streamlines.
 
 - **Visualize the streamlines with the directionally-encoded color**
 ![direction](https://github.com/LorisPilotto/COMMIT/blob/pilotto_project/doc/tutorials/visualizationTool/direction.png)
