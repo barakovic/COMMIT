@@ -5,6 +5,7 @@ This tutorial explains how to execute and use an interactive visualization tool 
 ## execute the script
 
 First, download the following [script](https://github.com/LorisPilotto/COMMIT/tree/master/doc/tutorials/visualizationTool/script.py).
+Before executing the script, make sure you have a valide outpute of COMMIT.
 Then, on the terminal go on the directory where the script is and type the command:
 
 ```
@@ -26,4 +27,6 @@ You should see something like this:
 
 ## how to use the visualization tool
 
-![treshold](https://github.com/LorisPilotto/COMMIT/blob/pilotto_project/doc/tutorials/visualizationTool/treshold.png)
+
+![treshold](https://github.com/LorisPilotto/COMMIT/blob/pilotto_project/doc/tutorials/visualizationTool/treshold.pdf)
+Once on the program, you can move the sliders. The streamlines with a weight inside the pink box are the streamlines you find important. You can reduce the opacity of the streamlines with a weight outside the pink box with the lower slider (as showed on the image).
