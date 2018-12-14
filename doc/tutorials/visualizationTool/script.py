@@ -351,6 +351,7 @@ def main():
     opacity_slider = ui.LineSlider2D(min_value=0.0,
                                      max_value=1.0,
                                      initial_value=0.5,
+                                     text_template="{ratio:.0%}",
                                      length=140)
 
     save_one_image_bouton.add_callback(save_one_image_bouton.slider_disk,

@@ -28,12 +28,15 @@ You should see something like this:
 ## how to use the visualization tool
 
 
+![iteration](https://github.com/LorisPilotto/COMMIT/blob/pilotto_project/doc/tutorials/visualizationTool/iteration.png)
+Once on the program, you can move the sliders. The most important one is the slider, showed by the pink arrow, that goes throught the iterations. The number of the iteration you are visualizing appeare below this slider.
+
 ![treshold](https://github.com/LorisPilotto/COMMIT/blob/pilotto_project/doc/tutorials/visualizationTool/treshold.png)
-Once on the program, you can move the sliders. The streamlines with a weight inside the pink box are the streamlines you find important. You can reduce the opacity of the streamlines with a weight outside the pink box with the lower slider (as showed on the image).
+The streamlines with a weight inside the pink box are the streamlines you find important. You can reduce the opacity of the streamlines with a weight outside the pink box with the lower slider (as showed on the image).
 You can also notice that "Number of streamlines in interval" alows you to know how much streamlines have their weight's value inside the pink box.
 
 ![colorblue](https://github.com/LorisPilotto/COMMIT/blob/pilotto_project/doc/tutorials/visualizationTool/colorblue.png)
 By moving the upper slider you can change the color of the streamlines
 
 ![direction](https://github.com/LorisPilotto/COMMIT/blob/pilotto_project/doc/tutorials/visualizationTool/direction.png)
-By moving the slider showed by the pink arrow you can change the color map. Putting the slider on the left allows you to see a mapping between streamlines and their weight. And by puting the slider on the right you can see the streamlines with a directionally-encoded color (other ffunctionality are still available).
+By moving the slider showed by the pink arrow you can change the color map. Putting the slider on the left allows you to see a mapping between streamlines and their weight. And by puting the slider on the right you can see the streamlines with a directionally-encoded color (other functionalities are still available).
