@@ -27,7 +27,7 @@ You should see something like this:
 
 ## how to use the visualization tool
 
-
+-**Change the iteration of COMMIT we want to visualize**
 ![iteration](https://github.com/LorisPilotto/COMMIT/blob/pilotto_project/doc/tutorials/visualizationTool/iteration.png)
 Once on the program, you can move the sliders. The most important one is the slider, showed by the pink arrow, that goes throught the iterations. The number of the iteration you are visualizing appeare below this slider.
 
