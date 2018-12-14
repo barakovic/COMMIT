@@ -40,3 +40,6 @@ By moving the upper slider you can change the color of the streamlines
 
 ![direction](https://github.com/LorisPilotto/COMMIT/blob/pilotto_project/doc/tutorials/visualizationTool/direction.png)
 By moving the slider showed by the pink arrow you can change the color map. Putting the slider on the left allows you to see a mapping between streamlines and their weight. And by puting the slider on the right you can see the streamlines with a directionally-encoded color (other functionalities are still available).
+
+![butons](https://github.com/LorisPilotto/COMMIT/blob/pilotto_project/doc/tutorials/visualizationTool/butons.png)
+Finaly there are two butons, one to save the current view in the folder of the script and one to show a graph of the weights.
