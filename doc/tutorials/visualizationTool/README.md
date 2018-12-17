@@ -9,7 +9,7 @@ Before executing the script, make sure you have a valide outpute of COMMIT.
 Then, on the terminal go on the directory where the script is and type the command:
 
 ```
-python /home/.../CommitOutput/ 1000
+python script.py /home/.../CommitOutput/ 1000
 ```
 which will launch the program and load 1000 streamlines.
 

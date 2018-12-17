@@ -284,7 +284,7 @@ def main():
     good_stream_actor = actor.line(good_bundle, good_Weight,
                                lookup_colormap=lut_cmap)
 
-    bar = actor.scalar_bar(lut_cmap, title = 'diameter')
+    bar = actor.scalar_bar(lut_cmap, title = 'weight')
     bar.SetHeight(0.5)
     bar.SetWidth(0.1)
     bar.SetPosition(0.85,0.45)
