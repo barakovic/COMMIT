@@ -9,7 +9,7 @@ Before executing the script, make sure you have a valide outpute of COMMIT.
 Then, on the terminal go on the directory where the script is and type the command:
 
 ```
-python /home/.../CommitOutput/ 1000
+python script.py /home/.../CommitOutput/ 1000
 ```
 which will launch the program and load 1000 streamlines.
 
@@ -29,7 +29,7 @@ You should see something like this:
 
 - **Change the iteration of COMMIT we want to visualize**
 ![iteration](https://github.com/LorisPilotto/COMMIT/blob/pilotto_project/doc/tutorials/visualizationTool/iteration.png)
-Once on the program, you can move the sliders. The most important one is the slider, showed by the pink arrow, that goes throught the iterations. The number of the iteration you are visualizing appeare below this slider.
+Once on the program, you can move the sliders. The most important one is the slider, showed by the pink arrow, that goes throught the iterations. The number of the iteration you are visualizing appears below this slider.
 
 - **A lower and a upper threshold to lower the visibility of unwanted weights**
 ![treshold](https://github.com/LorisPilotto/COMMIT/blob/pilotto_project/doc/tutorials/visualizationTool/treshold.png)
@@ -42,7 +42,7 @@ By moving the upper slider you can change the color of the streamlines.
 
 - **Visualize the streamlines with the directionally-encoded color**
 ![direction](https://github.com/LorisPilotto/COMMIT/blob/pilotto_project/doc/tutorials/visualizationTool/direction.png)
-By moving the slider showed by the pink arrow you can change the color map. Putting the slider on the left allows you to see a mapping between streamlines and their weight. And by puting the slider on the right you can see the streamlines with a directionally-encoded color (other functionalities are still available).
+By moving the slider showed by the pink arrow you can change the colormap. Putting the slider on the left allows you to see a mapping between streamlines and their weight. And by puting the slider on the right you can see the streamlines with a directionally-encoded color (other functionalities are still available).
 
 - **Button to save the image and to show a graph of the weights**
 ![butons](https://github.com/LorisPilotto/COMMIT/blob/pilotto_project/doc/tutorials/visualizationTool/butons.png)
