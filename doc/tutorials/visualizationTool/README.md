@@ -4,7 +4,7 @@ This tutorial explains how to execute and use the interactive visualization tool
 
 ## Execute the script
 
-First, download the following [script](https://github.com/LorisPilotto/COMMIT/tree/master/doc/tutorials/visualizationTool/visualizationTool.py).
+First, download the following [script](https://github.com/LorisPilotto/COMMIT/blob/pilotto_project/doc/tutorials/visualizationTool/visualizationTool.py).
 
 Before executing the script, make sure you have a valid output of COMMIT.
 
@@ -17,6 +17,8 @@ which will launch the program and load 1000 streamlines.
 
 
 If you have both CylinderZeppelinBall and StickZeppelinBall models, you will have the possibility to choose your model:
+
+
 ```
 Which model do you want to load (1 for 'Cylinder', 2 for 'Stick') : 
 ```
@@ -42,7 +44,7 @@ By moving the upper slider you can change the color of the streamlines.
 
 - **Visualize the streamlines with the directionally-encoded color**
 ![direction](https://github.com/LorisPilotto/COMMIT/blob/pilotto_project/doc/tutorials/visualizationTool/direction.png)
-By moving the slider showed by the arrow you can change the colormap. Putting the slider on the left allows you to see a mapping between streamlines and their weight. By puting the slider on the right you can see the streamlines with a directionally-encoded color (other functionalities are still available).
+By moving the slider showed by the arrow you can change the colormap. Putting the slider on the left allows you to see a mapping between streamlines and their weights. By setting the slider on the right you can see the streamlines with a directionally-encoded color (other functionalities are still available).
 
 - **Button to save the image and to show a graph of the weights**
 ![butons](https://github.com/LorisPilotto/COMMIT/blob/pilotto_project/doc/tutorials/visualizationTool/butons.png)
