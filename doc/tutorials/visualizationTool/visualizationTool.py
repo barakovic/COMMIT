@@ -19,10 +19,6 @@ import matplotlib.pyplot as plt
 import vtk
 from vtk.util.numpy_support import vtk_to_numpy
 import sys
-import time
-with open('/proc/meminfo') as file:
-    print(file)
-
 
 DESCRIPTION = """
     Description....
@@ -494,7 +490,6 @@ def refresh_3x2_arrays():
     global good_Weight
     global good_bundle
 
-    start = time.time()
     big_bundle = []
     big_Weight = []
     good_bundle = []
@@ -514,8 +509,6 @@ def refresh_3x2_arrays():
             good_Weight.append(smallWeight_safe[i])
             good_bundle.append(smallBundle_safe[i])
         i=i+1
-    end = time.time()
-    print(end - start)
     return
 
 #function to refresh the 3 (weak, good, big) actors in the renderer using the 3x2 arrays
