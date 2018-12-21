@@ -10,13 +10,21 @@ import os
 import nibabel as nib
 import numpy as np
 import pickle
-import dipy
+try:
+    import dipy
+except ImportError:
+    sys.exit("""You need dipy!
+                install it from http://nipy.org/dipy/installation.html.""")
 from dipy.viz import window, actor, ui
 from dipy.tracking.streamline import transform_streamlines
 import copy
 import os
 import matplotlib.pyplot as plt
-import vtk
+try:
+    import vtk
+except ImportError:
+    sys.exit("""You need vtk!
+                run pip install vtk.""")
 from vtk.util.numpy_support import vtk_to_numpy
 import sys
 
