@@ -20,6 +20,7 @@ import vtk
 from vtk.util.numpy_support import vtk_to_numpy
 import sys
 
+
 DESCRIPTION = """
     Description....
         An interactive visualization tool to study convergence of COMMIT's microstructure estimates
