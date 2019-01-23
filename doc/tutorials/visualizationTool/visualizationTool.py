@@ -466,6 +466,7 @@ def normalize_file_name(list):
         if list[i].endswith('.npy'):
             list[i] = list[i][:-4]
             os.rename(args.commitOutputPath+"/Coeff_x_"+model+"ZeppelinBall/"+list[i]+'.npy', args.commitOutputPath+"/Coeff_x_"+model+"ZeppelinBall/"+list[i].zfill(4)+'.npy')
+            list[i] = list[i].zfill(4)
         i=i+1
     return
     
