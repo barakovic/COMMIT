@@ -322,7 +322,7 @@ def main():
     add_graph_bouton = ui.LineSlider2D(min_value=0,
                                     max_value=1,
                                     initial_value=0,
-                                    text_template="graphe",
+                                    text_template="graph",
                                     length=1)
 
     color_slider = ui.LineSlider2D(min_value=0.0,
@@ -371,7 +371,7 @@ def main():
     color_slider.add_callback(color_slider.slider_line,
                                "LeftButtonPressEvent", change_streamlines_color)
     add_graph_bouton.add_callback(add_graph_bouton.slider_disk,
-                                "LeftButtonPressEvent", add_graphe)
+                                "LeftButtonPressEvent", add_graph)
 
     change_colormap_slider.add_callback(change_colormap_slider.slider_disk,
                                 "MouseMoveEvent", change_colormap)
@@ -477,11 +477,11 @@ def refresh_showManager(i_ren, obj, slider):
     show_m.render()
     return
 
-#function called by the graphe's slider
-def add_graphe(i_ren, obj, slider):
+#function called by the graph's slider
+def add_graph(i_ren, obj, slider):
     fig = plt.figure()
     ax = fig.add_subplot(111)
-    n, bins, rectangles = ax.hist(x=smallWeight_safe, bins=50, density=False, label = 'graphe')
+    n, bins, rectangles = ax.hist(x=smallWeight_safe, bins=50, density=False, label = 'graph')
     plt.xlabel('weight')
     plt.ylabel('number of streamlines')
     plt.title('histogram of iteration '+str(list_x_file[int(change_iteration_slider.value)]))
