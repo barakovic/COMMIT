@@ -4,7 +4,7 @@ This tutorial explains how to execute and use the interactive visualization tool
 
 ## Execute the script
 
-First, download the following [script](https://github.com/LorisPilotto/COMMIT/blob/pilotto_project/doc/tutorials/visualizationTool/visualizationTool.py).
+First, download the following trk file [file](https://drive.google.com/open?id=1N619GxgMxR7tdwu16NGTsHtz27_qZnj4) and put it in the CommitOutput folder.
 
 Before executing the script, make sure you have a valid output of COMMIT.
 
