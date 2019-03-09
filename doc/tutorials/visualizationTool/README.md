@@ -4,14 +4,14 @@ This tutorial explains how to execute and use the interactive visualization tool
 
 ## Execute the script
 
-First, download the following trk file [file](https://drive.google.com/open?id=1N619GxgMxR7tdwu16NGTsHtz27_qZnj4) and put it in the CommitOutput folder.
+First, download the following trk [file](https://drive.google.com/open?id=1N619GxgMxR7tdwu16NGTsHtz27_qZnj4) and put it in the CommitOutput folder.
 
-Before executing the script, make sure you have a valid output of COMMIT.
+Before executing the script, make sure you have a valid output of COMMIT. Install COMMIT and run tutorial [GettingStarted](https://github.com/daducci/COMMIT/tree/master/doc/tutorials/GettingStarted) 
 
 Then, on the terminal go on the directory where the script is and type the command:
 
 ```
-python script.py /home/.../CommitOutput/ 1000
+python visualizationTool.py CommitOutput/ 1000
 ```
 which will launch the program and load 1000 streamlines.
 
