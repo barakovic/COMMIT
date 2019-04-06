@@ -853,27 +853,27 @@ cdef class Evaluation :
             niiEC_img[ self.DICTIONARY['MASK_ix'], self.DICTIONARY['MASK_iy'], self.DICTIONARY['MASK_iz'] ] = xv
         print '[ OK ]'
 
-        print '\t\t- isotropic',
-        sys.stdout.flush()
+        #print '\t\t- isotropic',
+        #sys.stdout.flush()
         niiISO_img = np.zeros( self.get_config('dim'), dtype=np.float32 )
-        if len(self.KERNELS['iso']) > 0 :
-            offset = nF * self.KERNELS['wmr'].shape[0] + nE * self.KERNELS['wmh'].shape[0]
-            xv = x[offset:].reshape( (-1,nV) ).sum( axis=0 )
-            niiISO_img[ self.DICTIONARY['MASK_ix'], self.DICTIONARY['MASK_iy'], self.DICTIONARY['MASK_iz'] ] = xv
-        print '   [ OK ]'
+        #if len(self.KERNELS['iso']) > 0 :
+        #    offset = nF * self.KERNELS['wmr'].shape[0] + nE * self.KERNELS['wmh'].shape[0]
+        #    xv = x[offset:].reshape( (-1,nV) ).sum( axis=0 )
+        #    niiISO_img[ self.DICTIONARY['MASK_ix'], self.DICTIONARY['MASK_iy'], self.DICTIONARY['MASK_iz'] ] = xv
+        #print '   [ OK ]'
 
         if self.get_config('doNormalizeMaps') :
                 niiIC = nibabel.Nifti1Image( niiIC_img / ( niiIC_img + niiEC_img + niiISO_img + not_NaN), affine )
                 niiEC = nibabel.Nifti1Image( niiEC_img / ( niiIC_img + niiEC_img + niiISO_img + not_NaN), affine )
-                niiISO = nibabel.Nifti1Image( niiISO_img / ( niiIC_img + niiEC_img + niiISO_img + not_NaN), affine )
+                #niiISO = nibabel.Nifti1Image( niiISO_img / ( niiIC_img + niiEC_img + niiISO_img + not_NaN), affine )
         else:
                 niiIC = nibabel.Nifti1Image( niiIC_img, affine )
                 niiEC = nibabel.Nifti1Image( niiEC_img, affine )
-                niiISO = nibabel.Nifti1Image( niiISO_img, affine )
+                #niiISO = nibabel.Nifti1Image( niiISO_img, affine )
 
         nibabel.save( niiIC , pjoin(RESULTS_path,'compartment_IC.nii.gz') )
         nibabel.save( niiEC , pjoin(RESULTS_path,'compartment_EC.nii.gz') )
-        nibabel.save( niiISO , pjoin(RESULTS_path,'compartment_ISO.nii.gz') )
+        #nibabel.save( niiISO , pjoin(RESULTS_path,'compartment_ISO.nii.gz') )
 
         with open( pjoin(RESULTS_path,'results.pickle'), 'wb+' ) as fid :
             cPickle.dump( [self.CONFIG, self.x, x], fid, protocol=2 )
