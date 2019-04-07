@@ -19,3 +19,9 @@ class VolumeFractions( amico.models.VolumeFractions ) :
     See the AMICO.model module for details.
     """
     pass
+
+class StickZeppelinBallDiffusivity( amico.models.StickZeppelinBallDiffusivity ) :
+    """Simulate the response functions according to the Stick-Zeppelin-Ball model.
+    See the AMICO.model module for details.
+    """
+    pass
