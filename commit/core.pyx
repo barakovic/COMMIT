@@ -708,7 +708,7 @@ cdef class Evaluation :
         params = {}
         params['lambda1'] = 0
         params['lambda2'] = 0
-        self.x = spams.lasso( np.asfortranarray( self.get_y().reshape(-1,1) ), D=A_view, **params ).todense().A1
+        self.x = spams.lasso( np.asfortranarray( self.get_y().reshape(-1,1) ), D=np.asfortranarray(A_view), **params ).todense().A1
 
         nF = self.DICTIONARY['IC']['nF']
         nE = self.DICTIONARY['EC']['nE']
