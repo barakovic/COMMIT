@@ -18,6 +18,8 @@ import amico.lut
 import pyximport
 pyximport.install( reload_support=True )
 
+import spams
+
 
 def setup( lmax = 12 ) :
     """General setup/initialization of the COMMIT framework."""
@@ -695,7 +697,18 @@ cdef class Evaluation :
         t = time.time()
         print '\n-> Fit model'
 
-        self.x, opt_details = commit.solvers.solve(self.get_y(), self.A, self.A.T, tol_fun = tol_fun, tol_x = tol_x, max_iter = max_iter, verbose = verbose, x0 = x0, regularisation = regularisation, coeff_path = COEFF_path, save_x_interval = save_x_interval )
+        #self.x, opt_details = commit.solvers.solve(self.get_y(), self.A, self.A.T, tol_fun = tol_fun, tol_x = tol_x, max_iter = max_iter, verbose = verbose, x0 = x0, regularisation = regularisation, coeff_path = COEFF_path, save_x_interval = save_x_interval )
+
+        A_view = np.zeros((self.A.shape[0], self.A.shape[1]))
+        for g in range(self.A.shape[1]):
+            vec = np.zeros(self.A.shape[1])
+            vec[g] = 1
+            A_view[:,g] = self.A.dot(vec)
+
+        params = {}
+        params['lambda1'] = 0
+        params['lambda2'] = 0
+        self.x = spams.lasso( np.asfortranarray( self.get_y().reshape(-1,1) ), D=A_view, **params ).todense().A1
 
         nF = self.DICTIONARY['IC']['nF']
         nE = self.DICTIONARY['EC']['nE']
@@ -715,7 +728,7 @@ cdef class Evaluation :
                 np.save( COEFF_path + '/norm3.npy', norm3 )
                 np.save( COEFF_path + '/norm_fib.npy', norm_fib )
 
-        self.CONFIG['optimization']['fit_details'] = opt_details
+        #self.CONFIG['optimization']['fit_details'] = opt_details
         self.CONFIG['optimization']['fit_time'] = time.time()-t
 
         print '   [ %s ]' % ( time.strftime("%Hh %Mm %Ss", time.gmtime(self.CONFIG['optimization']['fit_time']) ) )
