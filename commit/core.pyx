@@ -697,18 +697,18 @@ cdef class Evaluation :
         t = time.time()
         print '\n-> Fit model'
 
-        #self.x, opt_details = commit.solvers.solve(self.get_y(), self.A, self.A.T, tol_fun = tol_fun, tol_x = tol_x, max_iter = max_iter, verbose = verbose, x0 = x0, regularisation = regularisation, coeff_path = COEFF_path, save_x_interval = save_x_interval )
+        self.x, opt_details = commit.solvers.solve(self.get_y(), self.A, self.A.T, tol_fun = tol_fun, tol_x = tol_x, max_iter = max_iter, verbose = verbose, x0 = x0, regularisation = regularisation, coeff_path = COEFF_path, save_x_interval = save_x_interval )
 
-        A_view = np.zeros((self.A.shape[0], self.A.shape[1]))
-        for g in range(self.A.shape[1]):
-            vec = np.zeros(self.A.shape[1])
-            vec[g] = 1
-            A_view[:,g] = self.A.dot(vec)
+        #A_view = np.zeros((self.A.shape[0], self.A.shape[1]))
+        #for g in range(self.A.shape[1]):
+        #    vec = np.zeros(self.A.shape[1])
+        #    vec[g] = 1
+        #    A_view[:,g] = self.A.dot(vec)
 
-        params = {}
-        params['lambda1'] = 0
-        params['lambda2'] = 0
-        self.x = spams.lasso( np.asfortranarray( self.get_y().reshape(-1,1) ), D=np.asfortranarray(A_view), **params ).todense().A1
+        #params = {}
+        #params['lambda1'] = 0
+        #params['lambda2'] = 0
+        #self.x = spams.lasso( np.asfortranarray( self.get_y().reshape(-1,1) ), D=np.asfortranarray(A_view), **params ).todense().A1
 
         nF = self.DICTIONARY['IC']['nF']
         nE = self.DICTIONARY['EC']['nE']
