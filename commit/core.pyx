@@ -901,7 +901,8 @@ cdef class Evaluation :
             d1 = len(self.d_par_a)
             d2 = len(self.d_par_e)
             d3 = len(self.d_per_e)
-            d4 = len(self.T2)
+            d4 = len(self.T2_a)
+            d5 = len(self.T2_e)
 
 
             print '\t\t- intra-axonal T2',
@@ -911,7 +912,7 @@ cdef class Evaluation :
                 offset = nF * self.KERNELS['wmr'].shape[0]
                 tmp = ( x[:offset].reshape(-1, nF * d4 ) ).sum( axis=0 )
                 tmp1 = tmp.reshape(-1,nF)
-                IC_T2 = np.dot( self.T2*1000, tmp1 )
+                IC_T2 = np.dot( self.T2_a*1000, tmp1 )
                 xv = np.bincount( self.DICTIONARY['IC']['v'], minlength=nV, weights=IC_T2[ self.DICTIONARY['IC']['fiber'] ] * self.DICTIONARY['IC']['len']).astype(np.float32)
             niiICT2_img[ self.DICTIONARY['MASK_ix'], self.DICTIONARY['MASK_iy'], self.DICTIONARY['MASK_iz'] ] = xv
             print '[ OK ]'
@@ -945,7 +946,7 @@ cdef class Evaluation :
                 offset = nF * self.KERNELS['wmr'].shape[0]
                 tmp = x[offset:offset+nE*len(self.KERNELS['wmh'])].reshape( (-1, nE* d4) ).sum( axis=0 )
                 tmp1 = tmp.reshape(-1,nE)
-                EC_T2 = np.dot( self.T2*1000, tmp1 )
+                EC_T2 = np.dot( self.T2_e*1000, tmp1 )
                 xv = np.bincount( self.DICTIONARY['EC']['v'], weights=EC_T2, minlength=nV ).astype(np.float32)
             niiECT2_img[ self.DICTIONARY['MASK_ix'], self.DICTIONARY['MASK_iy'], self.DICTIONARY['MASK_iz'] ] = xv
             print '[ OK ]'
