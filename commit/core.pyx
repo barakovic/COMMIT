@@ -43,7 +43,11 @@ cdef class Evaluation :
     cdef public d_par_a
     cdef public d_par_e
     cdef public d_per_e
-    cdef public T2
+    cdef public d_iso
+    cdef public T2_a
+    cdef public T2_e
+    cdef public T2_iso
+
 
     def __init__( self, study_path, subject ) :
         """Setup the data structures with default values.
@@ -66,7 +70,10 @@ cdef class Evaluation :
         self.d_par_a    = None
         self.d_par_e    = None
         self.d_per_e    = None
-        self.T2         = None
+        self.d_iso      = None
+        self.T2_a       = None
+        self.T2_e       = None
+        self.T2_iso     = None
 
         # store all the parameters of an evaluation with COMMIT
         self.CONFIG = {}
@@ -662,22 +669,23 @@ cdef class Evaluation :
             raise RuntimeError( 'Operator not built; call "build_operator()" first.' )
 
         # Debug mode on
-        COEFF_path = 'Coeff_x_' + self.model.id
-        if save_x_suffix :
-            self.set_config('path_suffix', save_x_suffix)
-            COEFF_path = COEFF_path + save_x_suffix
+        if save_x_interval > 0:
+            COEFF_path = 'Coeff_x_' + self.model.id
+            if save_x_suffix :
+                self.set_config('path_suffix', save_x_suffix)
+                COEFF_path = COEFF_path + save_x_suffix
 
-        print '\n-> Saving coefficients x to "%s/*":' % COEFF_path
-        tic = time.time()
+            print '\n-> Saving coefficients x to "%s/*":' % COEFF_path
+            tic = time.time()
 
-        # create folder or delete existing files (if any)
-        COEFF_path = pjoin( self.get_config('TRACKING_path'), COEFF_path )
-        if not exists( COEFF_path ) :
-            makedirs( COEFF_path )
-        else :
-            for f in glob.glob( pjoin(COEFF_path,'*') ) :
-                remove( f )
-        self.set_config('COEFF_path', COEFF_path)
+            # create folder or delete existing files (if any)
+            COEFF_path = pjoin( self.get_config('TRACKING_path'), COEFF_path )
+            if not exists( COEFF_path ) :
+                makedirs( COEFF_path )
+            else :
+                for f in glob.glob( pjoin(COEFF_path,'*') ) :
+                    remove( f )
+            self.set_config('COEFF_path', COEFF_path)
 
 
         if x0 is not None :
@@ -697,18 +705,8 @@ cdef class Evaluation :
         t = time.time()
         print '\n-> Fit model'
 
-        self.x, opt_details = commit.solvers.solve(self.get_y(), self.A, self.A.T, tol_fun = tol_fun, tol_x = tol_x, max_iter = max_iter, verbose = verbose, x0 = x0, regularisation = regularisation, coeff_path = COEFF_path, save_x_interval = save_x_interval )
+        self.x, opt_details = commit.solvers.solve(self.get_y(), self.A, self.A.T, tol_fun = tol_fun, tol_x = tol_x, max_iter = max_iter, verbose = verbose, x0 = x0, regularisation = regularisation, save_x_interval = save_x_interval )
 
-        #A_view = np.zeros((self.A.shape[0], self.A.shape[1]))
-        #for g in range(self.A.shape[1]):
-        #    vec = np.zeros(self.A.shape[1])
-        #    vec[g] = 1
-        #    A_view[:,g] = self.A.dot(vec)
-
-        #params = {}
-        #params['lambda1'] = 0
-        #params['lambda2'] = 0
-        #self.x = spams.lasso( np.asfortranarray( self.get_y().reshape(-1,1) ), D=np.asfortranarray(A_view), **params ).todense().A1
 
         nF = self.DICTIONARY['IC']['nF']
         nE = self.DICTIONARY['EC']['nE']
@@ -801,15 +799,15 @@ cdef class Evaluation :
         if save_coeff:
             print '\t\t- txt... ',
             sys.stdout.flush()
-            np.savetxt(pjoin(RESULTS_path,'xic.txt'), x[0:nF])
-            np.savetxt(pjoin(RESULTS_path,'xec.txt'), x[nF:nF+nE])
-            np.savetxt(pjoin(RESULTS_path,'xiso.txt'), x[(nF+nE):])
+            np.savetxt(pjoin(RESULTS_path,'xic.txt'), x[0:nF* self.KERNELS['wmr'].shape[0]])
+            np.savetxt(pjoin(RESULTS_path,'xec.txt'), x[nF* self.KERNELS['wmr'].shape[0]:nF* self.KERNELS['wmr'].shape[0]+nE*self.KERNELS['wmh'].shape[0]])
+            np.savetxt(pjoin(RESULTS_path,'xiso.txt'), x[nF* self.KERNELS['wmr'].shape[0]+nE*self.KERNELS['wmh'].shape[0]:])
             with open( pjoin(RESULTS_path,'config.pickle'), 'wb+' ) as fid :
                 cPickle.dump( self.CONFIG, fid, protocol=2 )
             print '[ OK ]'
 
 
-        # Map of wovelwise errort
+        # Map of voxelwise error
         print '\t* fitting errors:'
 
         not_NaN = np.ones( self.get_config('dim'), dtype=np.float32 ) * 1e-16 # avoid division by 0
@@ -819,8 +817,19 @@ cdef class Evaluation :
         niiMAP     = nibabel.Nifti1Image( niiMAP_img, affine )
         niiMAP_hdr = niiMAP.header if nibabel.__version__ >= '2.0.0' else niiMAP.get_header()
 
+        niiY_img = np.zeros( (self.get_config('dim')[0], self.get_config('dim')[1], self.get_config('dim')[2], self.niiDWI.get_data().shape[3]), dtype=np.float32 )
+        niiY     = nibabel.Nifti1Image( niiY_img, affine )
+        niiY_hdr = niiY.header if nibabel.__version__ >= '2.0.0' else niiY.get_header()
+
         y_mea = np.reshape( self.niiDWI_img[ self.DICTIONARY['MASK_ix'], self.DICTIONARY['MASK_iy'], self.DICTIONARY['MASK_iz'], : ].flatten().astype(np.float32), (nV,-1) )
         y_est = np.reshape( self.A.dot(self.x), (nV,-1) ).astype(np.float32)
+
+        print '\t\t- Y estimated...'
+        sys.stdout.flush()
+        niiY_img[ self.DICTIONARY['MASK_ix'], self.DICTIONARY['MASK_iy'], self.DICTIONARY['MASK_iz'] ] = y_est
+        niiY_hdr['cal_min'] = 0
+        niiY_hdr['cal_max'] = y_est.max()
+        nibabel.save( niiY, pjoin(RESULTS_path,'fit_y_est.nii.gz') )
 
         print '\t\t- RMSE...',
         sys.stdout.flush()
@@ -852,12 +861,29 @@ cdef class Evaluation :
         # Map of compartment contributions
         print '\t* voxelwise contributions:'
 
+        if self.model.name == 'Stick-Zeppelin-Ball-Diffusivity-T2':
+            n1 = len(self.d_par_a)
+            n2 = len(self.d_par_e)
+            n3 = len(self.d_per_e)
+            n4 = len(self.d_iso)
+            n5 = len(self.T2_a)
+            n6 = len(self.T2_e)
+            n7 = len(self.T2_iso)
+        else:
+            n1 = self.KERNELS['wmr'].shape[0]
+            n2 = self.KERNELS['wmh'].shape[0]
+            n3 = 1
+            n4 = self.KERNELS['iso'].shape[0]
+            n5 = 1
+            n6 = 1
+            n7 = 1
+
         print '\t\t- intra-axonal',
         sys.stdout.flush()
         niiIC_img = np.zeros( self.get_config('dim'), dtype=np.float32 )
-        if len(self.KERNELS['wmr']) > 0 :
-            offset = nF * self.KERNELS['wmr'].shape[0]
-            tmp = ( x[:offset].reshape( (-1,nF) ) * norm_fib.reshape( (-1,nF) ) ).sum( axis=0 )
+        if n1 != 0 and n5 != 0 :
+            offset = nF * n1 * n5
+            tmp = x[:offset].reshape(-1,nF).sum( axis=0 )
             xv = np.bincount( self.DICTIONARY['IC']['v'], minlength=nV,
                 weights=tmp[ self.DICTIONARY['IC']['fiber'] ] * self.DICTIONARY['IC']['len']
             ).astype(np.float32)
@@ -867,9 +893,10 @@ cdef class Evaluation :
         print '\t\t- extra-axonal',
         sys.stdout.flush()
         niiEC_img = np.zeros( self.get_config('dim'), dtype=np.float32 )
-        if len(self.KERNELS['wmh']) > 0 :
-            offset = nF * self.KERNELS['wmr'].shape[0]
-            tmp = x[offset:offset+nE*len(self.KERNELS['wmh'])].reshape( (-1,nE) ).sum( axis=0 )
+        if n2 != 0 and n3 != 0 and n6 != 0 :
+            offset1 = nF * n1 * n5
+            offset2 = offset1 + nE * n2 * n3 * n6
+            tmp = x[offset1:offset2].reshape(-1,nE).sum( axis=0 )
             xv = np.bincount( self.DICTIONARY['EC']['v'], weights=tmp, minlength=nV ).astype(np.float32)
             niiEC_img[ self.DICTIONARY['MASK_ix'], self.DICTIONARY['MASK_iy'], self.DICTIONARY['MASK_iz'] ] = xv
         print '[ OK ]'
@@ -877,8 +904,8 @@ cdef class Evaluation :
         print '\t\t- isotropic',
         sys.stdout.flush()
         niiISO_img = np.zeros( self.get_config('dim'), dtype=np.float32 )
-        if len(self.KERNELS['iso']) > 0 :
-            offset = nF * self.KERNELS['wmr'].shape[0] + nE * self.KERNELS['wmh'].shape[0]
+        if n4 != 0 and n7 != 0 :
+            offset = nF * n1 * n5 + nE * n2 * n3 * n6
             xv = x[offset:].reshape( (-1,nV) ).sum( axis=0 )
             niiISO_img[ self.DICTIONARY['MASK_ix'], self.DICTIONARY['MASK_iy'], self.DICTIONARY['MASK_iz'] ] = xv
         print '   [ OK ]'
@@ -898,55 +925,58 @@ cdef class Evaluation :
 
 
         if self.model.name == 'Stick-Zeppelin-Ball-Diffusivity-T2':
-            d1 = len(self.d_par_a)
-            d2 = len(self.d_par_e)
-            d3 = len(self.d_per_e)
-            d4 = len(self.T2_a)
-            d5 = len(self.T2_e)
+            # nF
+            n1 = len(self.d_par_a)
+            n2 = len(self.d_par_e)
+            n3 = len(self.d_per_e)
+            n4 = len(self.d_iso)
+            n5 = len(self.T2_a)
+            n6 = len(self.T2_e)
+            n7 = len(self.T2_iso)
 
 
             print '\t\t- intra-axonal T2',
             sys.stdout.flush()
             niiICT2_img = np.zeros( self.get_config('dim'), dtype=np.float32 )
-            if len(self.KERNELS['wmr']) > 0 :
-                offset = nF * self.KERNELS['wmr'].shape[0]
-                tmp = ( x[:offset].reshape(-1, nF * d4 ) ).sum( axis=0 )
-                tmp1 = tmp.reshape(-1,nF)
-                IC_T2 = np.dot( self.T2_a*1000, tmp1 )
+            if n1 != 0 and n5 != 0 :
+                offset = nF * n1 * n5
+                tmp = ( x[:offset].reshape(-1, nF * n5 ) ).sum( axis=0 )
+                IC_T2 = np.dot( self.T2_a * 1000, tmp.reshape(-1,nF) )
                 xv = np.bincount( self.DICTIONARY['IC']['v'], minlength=nV, weights=IC_T2[ self.DICTIONARY['IC']['fiber'] ] * self.DICTIONARY['IC']['len']).astype(np.float32)
             niiICT2_img[ self.DICTIONARY['MASK_ix'], self.DICTIONARY['MASK_iy'], self.DICTIONARY['MASK_iz'] ] = xv
             print '[ OK ]'
 
             niiICT2 = nibabel.Nifti1Image( niiICT2_img / (niiIC_img + not_NaN ), affine )
             nibabel.save( niiICT2,  pjoin(RESULTS_path,'global_FIT_ia_T2.nii.gz'))
+            np.save( pjoin(RESULTS_path,'global_FIT_T2_fibers.npy'), IC_T2 )
 
 
             print '\t\t- intra-axonal d_par',
             sys.stdout.flush()
             niiICd_par_img = np.zeros( self.get_config('dim'), dtype=np.float32 )
-            if len(self.KERNELS['wmr']) > 0 :
-                offset = nF * self.KERNELS['wmr'].shape[0]
-                tmp = ( x[:offset].reshape(-1, nF * d4 ) )
-                tmp2 = np.zeros((d1, nF))
-                for i in range (d1):
-                    tmp2[i] = np.reshape(tmp[i], (-1,nF)).sum(axis=0)
-                IC_d_par = np.dot( self.d_par_a*1000, tmp2 )
+            if n1 != 0 and n5 != 0 :
+                offset = nF * n1 * n5
+                tmp = x[:offset].reshape(-1, nF * n5 )
+                tmp2 = np.zeros( ( n1, nF ) )
+                for i in range (n1):
+                    tmp2[i] = tmp[i].reshape(-1,nF).sum( axis=0 )
+                IC_d_par = np.dot( self.d_par_a * 1000, tmp2 )
                 xv = np.bincount( self.DICTIONARY['IC']['v'], minlength=nV, weights=IC_d_par[ self.DICTIONARY['IC']['fiber'] ] * self.DICTIONARY['IC']['len']).astype(np.float32)
             niiICd_par_img[ self.DICTIONARY['MASK_ix'], self.DICTIONARY['MASK_iy'], self.DICTIONARY['MASK_iz'] ] = xv
             print '[ OK ]'
 
             niiICd_par = nibabel.Nifti1Image( niiICd_par_img / (niiIC_img + not_NaN ), affine )
             nibabel.save( niiICd_par , pjoin(RESULTS_path,'global_FIT_d_par_a.nii.gz'))
-
+            np.save( pjoin(RESULTS_path,'global_FIT_d_par_a_fibers.npy'), IC_d_par)
 
             print '\t\t- extra-axonal T2',
             sys.stdout.flush()
             niiECT2_img = np.zeros( self.get_config('dim'), dtype=np.float32 )
-            if len(self.KERNELS['wmh']) > 0 :
-                offset = nF * self.KERNELS['wmr'].shape[0]
-                tmp = x[offset:offset+nE*len(self.KERNELS['wmh'])].reshape( (-1, nE* d4) ).sum( axis=0 )
-                tmp1 = tmp.reshape(-1,nE)
-                EC_T2 = np.dot( self.T2_e*1000, tmp1 )
+            if n2 !=0 and n3 !=0 and n6 != 0 :
+                offset1 = nF * n1 * n5
+                offset2 = offset1 + nE * n2 * n3 * n6
+                tmp = x[offset1:offset2].reshape(-1, nE* n6).sum( axis=0 )
+                EC_T2 = np.dot( self.T2_e * 1000, tmp.reshape(-1,nE) )
                 xv = np.bincount( self.DICTIONARY['EC']['v'], weights=EC_T2, minlength=nV ).astype(np.float32)
             niiECT2_img[ self.DICTIONARY['MASK_ix'], self.DICTIONARY['MASK_iy'], self.DICTIONARY['MASK_iz'] ] = xv
             print '[ OK ]'
@@ -956,12 +986,13 @@ cdef class Evaluation :
 
             print '\t\t- extra-axonal d_par',
             niiECd_par_img = np.zeros( self.get_config('dim'), dtype=np.float32 )
-            if len(self.KERNELS['wmr']) > 0 :
-                offset = nF * self.KERNELS['wmr'].shape[0]
-                tmp = x[offset:offset+nE*len(self.KERNELS['wmh'])].reshape( (-1, nE* d4) )
-                tmp2 = np.zeros((d2, nE))
-                for i in range (d2):
-                    tmp2[i] = np.reshape(tmp[i], (-1,nE)).sum(axis=0)
+            if n2 !=0 and n3 !=0 and n6 != 0 :
+                offset1 = nF * n1 * n5
+                offset2 = offset1 + nE * n2 * n3 * n6
+                tmp = x[offset1:offset2].reshape(-1, nE * n3 *n6 )
+                tmp2 = np.zeros((n2, nE))
+                for i in range (n2):
+                    tmp2[i] = tmp[i].reshape(-1,nE).sum( axis=0 )
                 EC_d_par = np.dot( self.d_par_e*1000, tmp2 )
                 xv = np.bincount( self.DICTIONARY['EC']['v'], minlength=nV, weights=EC_d_par ).astype(np.float32)
             niiECd_par_img[ self.DICTIONARY['MASK_ix'], self.DICTIONARY['MASK_iy'], self.DICTIONARY['MASK_iz'] ] = xv
@@ -969,6 +1000,23 @@ cdef class Evaluation :
 
             niiECd_par = nibabel.Nifti1Image( niiECd_par_img / (niiEC_img + not_NaN ), affine )
             nibabel.save( niiECd_par , pjoin(RESULTS_path,'global_FIT_d_par_e.nii.gz'))
+
+            print '\t\t- extra-axonal d_per',
+            niiECd_per_img = np.zeros( self.get_config('dim'), dtype=np.float32 )
+            if n2 !=0 and n3 !=0 and n6 != 0 :
+                offset1 = nF * n1 * n5
+                offset2 = offset1 + nE * n2 * n3 * n6
+                tmp = x[offset1:offset2].reshape(-1, nE* n3 *n6 ).sum( axis=0 ).reshape(-1, nE * n6 )
+                tmp2 = np.zeros((n3, nE))
+                for i in range (n3):
+                    tmp2[i] = tmp[i].reshape(-1,nE).sum( axis=0 )
+                EC_d_per = np.dot( self.d_per_e*1000, tmp2 )
+                xv = np.bincount( self.DICTIONARY['EC']['v'], minlength=nV, weights=EC_d_par ).astype(np.float32)
+            niiECd_per_img[ self.DICTIONARY['MASK_ix'], self.DICTIONARY['MASK_iy'], self.DICTIONARY['MASK_iz'] ] = xv
+            print '[ OK ]'
+
+            niiECd_per = nibabel.Nifti1Image( niiECd_per_img / (niiEC_img + not_NaN ), affine )
+            nibabel.save( niiECd_par , pjoin(RESULTS_path,'global_FIT_d_per_e.nii.gz'))
 
         with open( pjoin(RESULTS_path,'results.pickle'), 'wb+' ) as fid :
             cPickle.dump( [self.CONFIG, self.x, x], fid, protocol=2 )
