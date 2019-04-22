@@ -1011,7 +1011,7 @@ cdef class Evaluation :
                 for i in range (n3):
                     tmp2[i] = tmp[i].reshape(-1,nE).sum( axis=0 )
                 EC_d_per = np.dot( self.d_per_e*1000, tmp2 )
-                xv = np.bincount( self.DICTIONARY['EC']['v'], minlength=nV, weights=EC_d_par ).astype(np.float32)
+                xv = np.bincount( self.DICTIONARY['EC']['v'], minlength=nV, weights=EC_d_per ).astype(np.float32)
             niiECd_per_img[ self.DICTIONARY['MASK_ix'], self.DICTIONARY['MASK_iy'], self.DICTIONARY['MASK_iz'] ] = xv
             print '[ OK ]'
 
