@@ -821,8 +821,15 @@ cdef class Evaluation :
         niiY     = nibabel.Nifti1Image( niiY_img, affine )
         niiY_hdr = niiY.header if nibabel.__version__ >= '2.0.0' else niiY.get_header()
 
+        niiYa_img = np.zeros( (self.get_config('dim')[0], self.get_config('dim')[1], self.get_config('dim')[2], self.niiDWI.get_data().shape[3]), dtype=np.float32 )
+        niiYa     = nibabel.Nifti1Image( niiYa_img, affine )
+        niiYa_hdr = niiYa.header if nibabel.__version__ >= '2.0.0' else niiYa.get_header()
+
         y_mea = np.reshape( self.niiDWI_img[ self.DICTIONARY['MASK_ix'], self.DICTIONARY['MASK_iy'], self.DICTIONARY['MASK_iz'], : ].flatten().astype(np.float32), (nV,-1) )
         y_est = np.reshape( self.A.dot(self.x), (nV,-1) ).astype(np.float32)
+        xic = np.zeros(len(self.x))
+        xic[:nF*len(self.d_par_a)*len(self.T2_a)] = self.x[:nF*len(self.d_par_a)*len(self.T2_a)]
+        y_est_a = np.reshape( self.A.dot(xic), (nV,-1) ).astype(np.float32)
 
         print '\t\t- Y estimated...'
         sys.stdout.flush()
@@ -830,6 +837,13 @@ cdef class Evaluation :
         niiY_hdr['cal_min'] = 0
         niiY_hdr['cal_max'] = y_est.max()
         nibabel.save( niiY, pjoin(RESULTS_path,'fit_y_est.nii.gz') )
+
+        print '\t\t- Y estimated intra...'
+        sys.stdout.flush()
+        niiYa_img[ self.DICTIONARY['MASK_ix'], self.DICTIONARY['MASK_iy'], self.DICTIONARY['MASK_iz'] ] = y_est_a
+        niiYa_hdr['cal_min'] = 0
+        niiYa_hdr['cal_max'] = y_est_a.max()
+        nibabel.save( niiYa, pjoin(RESULTS_path,'fit_y_est_a.nii.gz') )
 
         print '\t\t- RMSE...',
         sys.stdout.flush()
@@ -941,14 +955,18 @@ cdef class Evaluation :
             if n1 != 0 and n5 != 0 :
                 offset = nF * n1 * n5
                 tmp = ( x[:offset].reshape(-1, nF * n5 ) ).sum( axis=0 )
-                IC_T2 = np.dot( self.T2_a * 1000, tmp.reshape(-1,nF) )
+                tmp1 = tmp.reshape(-1,nF)
+                IC_T2 = np.dot( self.T2_a * 1000, tmp1 )
+                bundle_T2 = np.zeros(nF)
+                for b in range(nF):
+                    bundle_T2 = np.dot(self.T2_a,tmp1[:,b]) / (np.sum(tmp1[:,b]+1e-16) ) * 1000
                 xv = np.bincount( self.DICTIONARY['IC']['v'], minlength=nV, weights=IC_T2[ self.DICTIONARY['IC']['fiber'] ] * self.DICTIONARY['IC']['len']).astype(np.float32)
             niiICT2_img[ self.DICTIONARY['MASK_ix'], self.DICTIONARY['MASK_iy'], self.DICTIONARY['MASK_iz'] ] = xv
             print '[ OK ]'
 
             niiICT2 = nibabel.Nifti1Image( niiICT2_img / (niiIC_img + not_NaN ), affine )
             nibabel.save( niiICT2,  pjoin(RESULTS_path,'global_FIT_ia_T2.nii.gz'))
-            np.save( pjoin(RESULTS_path,'global_FIT_T2_fibers.npy'), IC_T2 )
+            np.save( pjoin(RESULTS_path,'global_FIT_T2_fibers.npy'), bundle_T2 )
 
 
             print '\t\t- intra-axonal d_par',
@@ -961,13 +979,16 @@ cdef class Evaluation :
                 for i in range (n1):
                     tmp2[i] = tmp[i].reshape(-1,nF).sum( axis=0 )
                 IC_d_par = np.dot( self.d_par_a * 1000, tmp2 )
+                bundle_d_par = np.zeros(nF)
+                for b in range(nF):
+                    bundle_d_par = np.dot(self.d_par_a,tmp2[:,b]) / (np.sum(tmp2[:,b]+1e-16)) * 1000
                 xv = np.bincount( self.DICTIONARY['IC']['v'], minlength=nV, weights=IC_d_par[ self.DICTIONARY['IC']['fiber'] ] * self.DICTIONARY['IC']['len']).astype(np.float32)
             niiICd_par_img[ self.DICTIONARY['MASK_ix'], self.DICTIONARY['MASK_iy'], self.DICTIONARY['MASK_iz'] ] = xv
             print '[ OK ]'
 
             niiICd_par = nibabel.Nifti1Image( niiICd_par_img / (niiIC_img + not_NaN ), affine )
             nibabel.save( niiICd_par , pjoin(RESULTS_path,'global_FIT_d_par_a.nii.gz'))
-            np.save( pjoin(RESULTS_path,'global_FIT_d_par_a_fibers.npy'), IC_d_par)
+            np.save( pjoin(RESULTS_path,'global_FIT_d_par_a_fibers.npy'), bundle_d_par)
 
             print '\t\t- extra-axonal T2',
             sys.stdout.flush()
