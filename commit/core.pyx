@@ -959,7 +959,7 @@ cdef class Evaluation :
                 IC_T2 = np.dot( self.T2_a * 1000, tmp1 )
                 bundle_T2 = np.zeros(nF)
                 for b in range(nF):
-                    bundle_T2 = np.dot(self.T2_a,tmp1[:,b]) / (np.sum(tmp1[:,b]+1e-16) ) * 1000
+                    bundle_T2[b] = np.dot(self.T2_a,tmp1[:,b]) / (np.sum(tmp1[:,b]+1e-16) ) * 1000
                 xv = np.bincount( self.DICTIONARY['IC']['v'], minlength=nV, weights=IC_T2[ self.DICTIONARY['IC']['fiber'] ] * self.DICTIONARY['IC']['len']).astype(np.float32)
             niiICT2_img[ self.DICTIONARY['MASK_ix'], self.DICTIONARY['MASK_iy'], self.DICTIONARY['MASK_iz'] ] = xv
             print '[ OK ]'
@@ -981,7 +981,7 @@ cdef class Evaluation :
                 IC_d_par = np.dot( self.d_par_a * 1000, tmp2 )
                 bundle_d_par = np.zeros(nF)
                 for b in range(nF):
-                    bundle_d_par = np.dot(self.d_par_a,tmp2[:,b]) / (np.sum(tmp2[:,b]+1e-16)) * 1000
+                    bundle_d_par[b] = np.dot(self.d_par_a,tmp2[:,b]) / (np.sum(tmp2[:,b]+1e-16)) * 1000
                 xv = np.bincount( self.DICTIONARY['IC']['v'], minlength=nV, weights=IC_d_par[ self.DICTIONARY['IC']['fiber'] ] * self.DICTIONARY['IC']['len']).astype(np.float32)
             niiICd_par_img[ self.DICTIONARY['MASK_ix'], self.DICTIONARY['MASK_iy'], self.DICTIONARY['MASK_iz'] ] = xv
             print '[ OK ]'
