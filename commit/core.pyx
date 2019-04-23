@@ -1037,7 +1037,7 @@ cdef class Evaluation :
             print '[ OK ]'
 
             niiECd_per = nibabel.Nifti1Image( niiECd_per_img / (niiEC_img + not_NaN ), affine )
-            nibabel.save( niiECd_par , pjoin(RESULTS_path,'global_FIT_d_per_e.nii.gz'))
+            nibabel.save( niiECd_per , pjoin(RESULTS_path,'global_FIT_d_per_e.nii.gz'))
 
         with open( pjoin(RESULTS_path,'results.pickle'), 'wb+' ) as fid :
             cPickle.dump( [self.CONFIG, self.x, x], fid, protocol=2 )
